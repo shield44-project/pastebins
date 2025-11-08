@@ -29,6 +29,21 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 - Copy code to clipboard
 - Refresh preview on demand
 
+### 🔐 Encrypted Code Storage
+- **Server-side encrypted Python code examples**
+- Hybrid RSA-4096 + AES-256-GCM encryption
+- Token-based authentication with HMAC-SHA256
+- View encrypted code files through secure web interface
+- Code is decrypted server-side only (private key never exposed)
+- Time-limited access tokens for enhanced security
+
+### 📤 Multi-File Upload
+- Upload single files or multiple files at once
+- Support for folder/batch uploads
+- Automatic file organization by language
+- File preview before upload
+- Drag-and-drop support (coming soon)
+
 ## Supported Languages
 
 | Language | Extension | Execution Support | Compilation |
@@ -116,12 +131,34 @@ python app.py
 
 ### Uploading Code
 
+**Single File Upload (Paste Code):**
 1. Click on "Upload New Code" button on the home page
-2. Select the language (Python, Java, C, C++, or HTML)
-3. Enter a title for your code
-4. Optionally add a description
-5. Paste your code in the code editor
-6. Click "Upload Code"
+2. Select the "📝 Paste Code" tab
+3. Select the language (Python, Java, C, C++, or HTML)
+4. Enter a title for your code
+5. Optionally add a description
+6. Paste your code in the code editor
+7. Click "Upload Code"
+
+**Multiple File Upload:**
+1. Click on "Upload New Code" button on the home page
+2. Select the "📁 Upload Files" tab
+3. Select the language
+4. Click "Select Files" and choose one or more files
+5. Preview the selected files
+6. Click "Upload Files"
+
+### Viewing Encrypted Python Code Examples
+
+The repository includes encrypted Python code examples that can be viewed securely:
+
+1. Navigate to `/encrypted-viewer` on the running Flask app
+2. Select a Python file from the list of encrypted files
+3. Get an access token (automatically generated for 1 hour)
+4. Paste the token in the "Access Token" field
+5. Click "🔓 Decrypt & View" to see the decrypted code
+
+**Note:** The private key required for decryption must be present on the server (`private_key.pem`). The encrypted code examples are stored in the `encrypted/` directory and can only be viewed through the secure web interface with valid authentication tokens.
 
 ### Viewing and Executing Code
 
@@ -154,21 +191,33 @@ All uploaded files are automatically organized by language:
 
 ```
 codes_storer_website/
-├── app.py                  # Main Flask application
-├── requirements.txt        # Python dependencies
+├── app.py                  # Main Flask application (with encryption support)
+├── config.py              # Configuration settings
+├── encrypt_files.py       # Tool for encrypting Python files
+├── decrypt_server.py      # Standalone decryption server
+├── generate_keys.py       # RSA key generation tool
+├── token_gen.py           # Access token generation tool
+├── requirements.txt       # Python dependencies
 ├── README.md              # This file
+├── ENCRYPTION_README.md   # Encryption documentation
 ├── .gitignore            # Git ignore rules
+├── public_key.pem        # RSA public key (committed)
+├── private_key.pem       # RSA private key (NOT committed, server-only)
+├── viewer.html           # Encrypted file viewer (standalone page)
 ├── templates/            # HTML templates
 │   ├── base.html         # Base template
 │   ├── index.html        # Home page
 │   ├── category.html     # Category listing page
-│   ├── upload.html       # Upload form
+│   ├── upload.html       # Upload form (with multi-file support)
 │   ├── view_code.html    # Code viewer for executable languages
 │   └── view_html.html    # HTML website viewer with live preview
 ├── static/               # Static assets
 │   └── css/
 │       └── style.css     # Stylesheet
-└── stored_codes/         # Storage directory (auto-created)
+├── encrypted/            # Encrypted Python code examples (committed)
+│   ├── manifest.json     # Index of encrypted files
+│   └── *.py.enc.json    # Encrypted Python files
+└── stored_codes/         # Storage directory (auto-created, not committed)
     ├── python/           # Python files
     ├── java/             # Java files
     ├── c/                # C files
@@ -179,11 +228,28 @@ codes_storer_website/
 
 ## Security Features
 
+### Code Execution Security
 - Code execution is sandboxed with 5-second timeout limits
 - Temporary directory usage for compilation and execution
 - Input sanitization for uploaded code
 - HTML preview uses iframe with sandbox attributes
 - No direct file system access from executed code
+- Command injection prevention with shell=False
+
+### Encrypted Code Storage
+- **Hybrid RSA-4096 + AES-256-GCM encryption** for Python code examples
+- **Server-side decryption only** - private key never exposed to clients
+- **Token-based authentication** with HMAC-SHA256 signatures
+- **Time-limited access tokens** (default 1 hour, configurable)
+- Encrypted files stored in repository, safe to commit
+- Private key must be kept secure on server (excluded from git)
+- See [ENCRYPTION_README.md](ENCRYPTION_README.md) for detailed documentation
+
+### File Upload Security
+- File size limits (16MB max)
+- File extension validation
+- Filename sanitization to prevent path traversal
+- Content-type validation
 
 ## Technologies Used
 
@@ -192,6 +258,8 @@ codes_storer_website/
 - **Code Editor**: CodeMirror (syntax highlighting)
 - **Styling**: Custom CSS with responsive design
 - **Code Execution**: subprocess (Python), compilers (javac, gcc, g++)
+- **Encryption**: cryptography library (RSA-OAEP, AES-GCM)
+- **Authentication**: HMAC-SHA256 signed tokens
 
 ## Browser Compatibility
 
