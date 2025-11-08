@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Storage Website - Secure Code Management Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.3em;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .feature-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .feature-card p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+
+        .btn {
+            padding: 15px 35px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .section-title {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .tech-badge {
+            background: #e8ebff;
+            color: #667eea;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .info-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .info-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            color: #856404;
+            margin: 5px 0;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding: 20px;
+            opacity: 0.9;
+        }
+
+        .languages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .language-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .subtitle {
+                font-size: 1.1em;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📦 Code Storage Website</h1>
+            <p class="subtitle">A comprehensive platform for storing, viewing, and executing code files</p>
+            
+            <div class="btn-group">
+                <a href="viewer.html" class="btn btn-primary">🔐 Open Encrypted File Viewer</a>
+                <a href="https://github.com/shield44-project/codes_storer_website" class="btn btn-secondary">📂 View on GitHub</a>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2 class="section-title">✨ Key Features</h2>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <h3>Code Storage</h3>
+                    <p>Upload and organize code files by programming language</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">👁️</div>
+                    <h3>Syntax Highlighting</h3>
+                    <p>Beautiful code viewer with syntax highlighting powered by CodeMirror</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">▶️</div>
+                    <h3>Code Execution</h3>
+                    <p>Run Python, Java, C, and C++ code directly in the browser</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>HTML Preview</h3>
+                    <p>Live preview of HTML websites with fullscreen mode</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <h3>File Encryption</h3>
+                    <p>Secure file encryption with token-based authentication</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🗂️</div>
+                    <h3>Auto Categorization</h3>
+                    <p>Automatic organization by programming language</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">💻 Supported Languages</h2>
+            
+            <div class="languages-grid">
+                <div class="language-badge">🐍 Python</div>
+                <div class="language-badge">☕ Java</div>
+                <div class="language-badge">©️ C</div>
+                <div class="language-badge">⚙️ C++</div>
+                <div class="language-badge">🌐 HTML</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">🚀 Getting Started</h2>
+            
+            <div class="info-box">
+                <h3>⚠️ Important Note</h3>
+                <p><strong>This application requires a Python backend server to run.</strong></p>
+                <p>GitHub Pages only supports static HTML/CSS/JavaScript files. To use the full application with code execution features, you need to run it locally.</p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #333;">📦 Installation</h3>
+            
+            <p style="margin: 15px 0; color: #666;">1. Clone the repository:</p>
+            <div class="code-block">git clone https://github.com/shield44-project/codes_storer_website.git
+cd codes_storer_website</div>
+
+            <p style="margin: 15px 0; color: #666;">2. Install dependencies:</p>
+            <div class="code-block">pip install -r requirements.txt</div>
+
+            <p style="margin: 15px 0; color: #666;">3. Run the Flask application:</p>
+            <div class="code-block">python app.py</div>
+
+            <p style="margin: 15px 0; color: #666;">4. Open your browser and navigate to:</p>
+            <div class="code-block">http://localhost:5000</div>
+
+            <h3 style="margin-top: 30px; color: #333;">🔐 Using the Encrypted File Viewer (Static Page)</h3>
+            <p style="margin: 15px 0; color: #666;">The <a href="viewer.html" style="color: #667eea; text-decoration: none; font-weight: 600;">Encrypted File Viewer</a> is a standalone static HTML page that can be used on GitHub Pages. It requires a separate decryption server to be running.</p>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">🛠️ Tech Stack</h2>
+            
+            <div class="tech-stack">
+                <span class="tech-badge">Flask</span>
+                <span class="tech-badge">Python 3</span>
+                <span class="tech-badge">HTML5</span>
+                <span class="tech-badge">CSS3</span>
+                <span class="tech-badge">JavaScript</span>
+                <span class="tech-badge">CodeMirror</span>
+                <span class="tech-badge">Cryptography</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">📚 Documentation</h2>
+            
+            <p style="margin: 15px 0; color: #666; text-align: center;">
+                For detailed documentation, please refer to the 
+                <a href="https://github.com/shield44-project/codes_storer_website#readme" style="color: #667eea; text-decoration: none; font-weight: 600;">README.md</a> 
+                file in the repository.
+            </p>
+            
+            <p style="margin: 15px 0; color: #666; text-align: center;">
+                For encryption features, see the 
+                <a href="https://github.com/shield44-project/codes_storer_website/blob/main/ENCRYPTION_README.md" style="color: #667eea; text-decoration: none; font-weight: 600;">ENCRYPTION_README.md</a>.
+            </p>
+        </div>
+
+        <footer>
+            <p>Made with ❤️ by shield44-project</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                <a href="https://github.com/shield44-project/codes_storer_website" style="color: white; text-decoration: none;">
+                    ⭐ Star us on GitHub
+                </a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

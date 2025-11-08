@@ -39,7 +39,29 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 | C++      | `.cpp`    | ✅ Yes            | Yes (g++)   |
 | HTML     | `.html`   | 🌐 Live Preview   | N/A         |
 
-## Installation
+## GitHub Pages Deployment
+
+### 🌐 Live Demo
+Visit the live demo at: **https://shield44-project.github.io/codes_storer_website/**
+
+The GitHub Pages deployment includes:
+- A landing page explaining the project and features
+- The encrypted file viewer (`viewer.html`) as a standalone static page
+
+### ⚠️ Important Limitations
+**This is primarily a Flask application that requires a Python backend server.** GitHub Pages only supports static HTML/CSS/JavaScript files and **cannot run the full application** with the following features:
+- Code execution (Python, Java, C, C++)
+- Code storage and upload
+- File management
+
+To use these features, you must run the application locally (see installation instructions below).
+
+### What Works on GitHub Pages
+- ✅ Project landing page with documentation
+- ✅ Encrypted file viewer (requires separate decryption server)
+- ✅ Static content and documentation
+
+## Installation (Local Deployment)
 
 ### Prerequisites
 - Python 3.8 or higher
@@ -62,7 +84,7 @@ cd codes_storer_website
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+3. Run the Flask application:
 ```bash
 python app.py
 ```
@@ -70,6 +92,24 @@ python app.py
 4. Open your browser and navigate to:
 ```
 http://localhost:5000
+```
+
+### Running with Virtual Environment (Recommended)
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+python app.py
 ```
 
 ## Usage Guide
