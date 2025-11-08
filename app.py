@@ -8,6 +8,7 @@ import os
 import subprocess
 import tempfile
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -57,10 +58,16 @@ LANGUAGES = {
 
 def get_code_metadata_path(language):
     """Get path to metadata file for a language"""
+    # Validate language to prevent path injection
+    if language not in LANGUAGES:
+        raise ValueError(f"Invalid language: {language}")
     return os.path.join(app.config['CODES_DIRECTORY'], f'{language}_metadata.json')
 
 def load_code_metadata(language):
     """Load metadata for codes in a specific language"""
+    # Validate language parameter
+    if language not in LANGUAGES:
+        return []
     metadata_path = get_code_metadata_path(language)
     if os.path.exists(metadata_path):
         with open(metadata_path, 'r') as f:
@@ -69,6 +76,9 @@ def load_code_metadata(language):
 
 def save_code_metadata(language, metadata):
     """Save metadata for codes in a specific language"""
+    # Validate language parameter
+    if language not in LANGUAGES:
+        raise ValueError(f"Invalid language: {language}")
     metadata_path = get_code_metadata_path(language)
     with open(metadata_path, 'w') as f:
         json.dump(metadata, f, indent=2)
@@ -207,16 +217,28 @@ def execute_code(language, code_id):
     try:
         output = execute_code_file(language, code_path, custom_input)
         return jsonify({'output': output, 'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e), 'success': False}), 500
+    except Exception:
+        # Don't expose detailed error messages to users for security
+        return jsonify({'error': 'An error occurred while executing the code', 'success': False}), 500
 
 def execute_code_file(language, code_path, stdin_input=''):
     """Execute a code file and return output"""
+    # Validate language
+    if language not in LANGUAGES:
+        return "Error: Invalid language"
+    
     lang_config = LANGUAGES[language]
     
     with tempfile.TemporaryDirectory() as tmpdir:
         # Copy file to temp directory
         filename = os.path.basename(code_path)
+        
+        # Validate filename to prevent command injection
+        # Only allow alphanumeric, underscore, dash, and appropriate extension
+        import re
+        if not re.match(r'^[\w\-]+\.(py|java|c|cpp)$', filename):
+            return "Error: Invalid filename"
+        
         temp_file = os.path.join(tmpdir, filename)
         
         with open(code_path, 'r') as f:
@@ -229,14 +251,15 @@ def execute_code_file(language, code_path, stdin_input=''):
             # Compile if needed
             if lang_config['compile']:
                 if language == 'java':
-                    # Java compilation
+                    # Java compilation - using list form prevents shell injection
                     compile_cmd = [lang_config['compiler'], filename]
                     compile_result = subprocess.run(
                         compile_cmd,
                         cwd=tmpdir,
                         capture_output=True,
                         text=True,
-                        timeout=10
+                        timeout=10,
+                        shell=False  # Explicitly set shell=False for security
                     )
                     
                     if compile_result.returncode != 0:
@@ -244,16 +267,20 @@ def execute_code_file(language, code_path, stdin_input=''):
                     
                     # For Java, we need to run with class name (without extension)
                     class_name = filename[:-5]  # Remove .java
+                    # Validate class name
+                    if not re.match(r'^[\w]+$', class_name):
+                        return "Error: Invalid class name"
                     execute_cmd = [lang_config['executor'], class_name]
                 else:
-                    # C/C++ compilation
+                    # C/C++ compilation - using list form prevents shell injection
                     compile_cmd = [lang_config['compiler']] + lang_config['compiler_flags'] + [filename]
                     compile_result = subprocess.run(
                         compile_cmd,
                         cwd=tmpdir,
                         capture_output=True,
                         text=True,
-                        timeout=10
+                        timeout=10,
+                        shell=False  # Explicitly set shell=False for security
                     )
                     
                     if compile_result.returncode != 0:
@@ -261,17 +288,18 @@ def execute_code_file(language, code_path, stdin_input=''):
                     
                     execute_cmd = [lang_config['executor']]
             else:
-                # Python - direct execution
+                # Python - direct execution using list form
                 execute_cmd = [lang_config['executor'], filename]
             
-            # Execute the code
+            # Execute the code - using list form and shell=False for security
             result = subprocess.run(
                 execute_cmd,
                 cwd=tmpdir,
                 input=stdin_input,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
+                shell=False  # Explicitly set shell=False for security
             )
             
             output = result.stdout
@@ -286,4 +314,6 @@ def execute_code_file(language, code_path, stdin_input=''):
             return f"Error: {str(e)}"
 
 if __name__ == '__main__':
+    # WARNING: debug=True is for development only. 
+    # Set debug=False in production to prevent security vulnerabilities
     app.run(debug=True, host='0.0.0.0', port=5000)
