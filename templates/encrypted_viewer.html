@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Encrypted Files Viewer{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+<style>
+.encrypted-viewer {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px var(--card-shadow);
+    border: 2px solid var(--accent-primary);
+    margin-bottom: 2rem;
+}
+
+.encrypted-viewer h2 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 10px var(--neon-glow);
+}
+
+.files-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.file-card {
+    background: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-card:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 20px var(--neon-glow);
+    transform: translateY(-3px);
+}
+
+.file-card.selected {
+    border-color: var(--accent-primary);
+    background: var(--bg-secondary);
+    box-shadow: 0 0 25px var(--neon-glow);
+}
+
+.file-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.file-status {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.view-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.info-box {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-primary);
+    margin-bottom: 1.5rem;
+}
+
+.info-box h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.info-box p {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.code-display {
+    display: none;
+}
+
+.code-display.active {
+    display: block;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 2rem;
+    color: var(--accent-primary);
+}
+
+.error-message {
+    background: rgba(255, 71, 87, 0.1);
+    color: #ff4757;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 2px solid #ff4757;
+    margin-bottom: 1rem;
+}
+
+.success-message {
+    background: rgba(0, 212, 255, 0.1);
+    color: var(--accent-primary);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 2px solid var(--accent-primary);
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="encrypted-viewer">
+    <h1 style="color: var(--text-primary); text-shadow: 0 0 15px var(--neon-glow); margin-bottom: 1rem;">
+        🔐 Encrypted Files Viewer
+    </h1>
+    
+    <div class="info-box">
+        <h3>📘 How It Works</h3>
+        <p>
+            <strong>What are tokens?</strong> Tokens are secure, time-limited access keys that allow you to view encrypted files. 
+            They are automatically generated when you click on a file - no manual entry needed!
+        </p>
+        <p style="margin-top: 0.5rem;">
+            Simply click on any file below to automatically decrypt and view it. The system handles all authentication for you.
+        </p>
+    </div>
+
+    <h2>📁 Available Encrypted Files</h2>
+    <div id="filesList" class="files-grid">
+        <div class="loading-spinner">
+            <p>Loading encrypted files...</p>
+        </div>
+    </div>
+
+    <div id="messageArea"></div>
+
+    <div id="codeDisplay" class="code-display">
+        <div class="view-controls">
+            <button id="copyBtn" class="btn btn-secondary">📋 Copy Code</button>
+            <button id="closeBtn" class="btn btn-secondary">✕ Close</button>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+            <h3 style="color: var(--text-primary);" id="fileTitle">File Content</h3>
+        </div>
+        
+        <div class="code-editor-wrapper">
+            <textarea id="codeEditor"></textarea>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+<script>
+let editor = null;
+let selectedFile = null;
+
+// Initialize CodeMirror
+function initEditor() {
+    if (!editor) {
+        editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
+            mode: 'python',
+            theme: 'monokai',
+            lineNumbers: true,
+            readOnly: true,
+            viewportMargin: Infinity
+        });
+    }
+}
+
+// Load encrypted files list
+async function loadFiles() {
+    try {
+        const response = await fetch('/encrypted/list');
+        if (!response.ok) throw new Error('Failed to load files');
+        
+        const data = await response.json();
+        const filesList = document.getElementById('filesList');
+        
+        if (!data.files || data.files.length === 0) {
+            filesList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No encrypted files available</div>';
+            return;
+        }
+        
+        filesList.innerHTML = '';
+        data.files.forEach(file => {
+            const card = document.createElement('div');
+            card.className = 'file-card';
+            card.innerHTML = `
+                <div class="file-name">📄 ${file.name}</div>
+                <div class="file-status">🔒 Encrypted</div>
+            `;
+            card.onclick = () => viewFile(file.name, file.token);
+            filesList.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Error loading files:', error);
+        document.getElementById('filesList').innerHTML = 
+            '<div style="text-align: center; padding: 2rem; color: #ff4757;">Error loading files. Please refresh the page.</div>';
+    }
+}
+
+// View and decrypt a file
+async function viewFile(filename, token) {
+    const messageArea = document.getElementById('messageArea');
+    const codeDisplay = document.getElementById('codeDisplay');
+    
+    messageArea.innerHTML = '<div class="loading-spinner">🔓 Decrypting file...</div>';
+    codeDisplay.classList.remove('active');
+    
+    try {
+        const url = `/encrypted/file?name=${encodeURIComponent(filename)}&token=${encodeURIComponent(token)}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Decryption failed');
+        }
+        
+        const content = await response.text();
+        
+        // Initialize editor if not already done
+        initEditor();
+        
+        // Set content
+        editor.setValue(content);
+        document.getElementById('fileTitle').textContent = `📄 ${filename}`;
+        
+        // Show success message and code display
+        messageArea.innerHTML = `<div class="success-message">✓ Successfully decrypted ${filename}</div>`;
+        codeDisplay.classList.add('active');
+        
+        // Highlight selected file
+        document.querySelectorAll('.file-card').forEach(card => {
+            card.classList.remove('selected');
+            if (card.textContent.includes(filename)) {
+                card.classList.add('selected');
+            }
+        });
+        
+        selectedFile = filename;
+        
+        // Scroll to code display
+        codeDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+    } catch (error) {
+        console.error('Decryption error:', error);
+        messageArea.innerHTML = `
+            <div class="error-message">
+                ✗ Error: ${error.message}
+                <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+                    This could happen if the token expired or decryption failed. Try refreshing the page.
+                </p>
+            </div>
+        `;
+    }
+}
+
+// Copy code to clipboard
+document.getElementById('copyBtn').addEventListener('click', () => {
+    if (editor) {
+        const content = editor.getValue();
+        navigator.clipboard.writeText(content).then(() => {
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Copied!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        });
+    }
+});
+
+// Close code display
+document.getElementById('closeBtn').addEventListener('click', () => {
+    document.getElementById('codeDisplay').classList.remove('active');
+    document.getElementById('messageArea').innerHTML = '';
+    document.querySelectorAll('.file-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+});
+
+// Load files on page load
+loadFiles();
+</script>
+{% endblock %}
