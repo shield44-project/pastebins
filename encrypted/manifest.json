@@ -1,0 +1,20 @@
+{
+  "sumoffirsthalfviv.py": "sumoffirsthalfviv.py.enc.json",
+  "revhalfpal.py": "revhalfpal.py.enc.json",
+  "remlasdig.py": "remlasdig.py.enc.json",
+  "sumof.py": "sumof.py.enc.json",
+  "str.py": "str.py.enc.json",
+  "arm.py": "arm.py.enc.json",
+  "tes.py": "tes.py.enc.json",
+  "makepal.py": "makepal.py.enc.json",
+  "printdig.py": "printdig.py.enc.json",
+  "revnum.py": "revnum.py.enc.json",
+  "sq.py": "sq.py.enc.json",
+  "tuple.py": "tuple.py.enc.json",
+  "whilee.py": "whilee.py.enc.json",
+  "countpal.py": "countpal.py.enc.json",
+  "text.py": "text.py.enc.json",
+  "countpalatob.py": "countpalatob.py.enc.json",
+  "countdig.py": "countdig.py.enc.json",
+  "palthroughbin.py": "palthroughbin.py.enc.json"
+}

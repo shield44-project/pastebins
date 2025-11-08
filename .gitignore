@@ -22,9 +22,9 @@ ENV/
 *.swp
 *.swo
 
-# Encryption keys and encrypted files
+# Encryption keys (never commit private keys!)
 private_key.pem
-encrypted/
+# Note: encrypted/ directory IS committed to repository
 
 # Flask
 instance/

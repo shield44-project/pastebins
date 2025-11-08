@@ -294,7 +294,7 @@
         // Load manifest on page load
         async function loadManifest() {
             try {
-                const response = await fetch('/manifest');
+                const response = await fetch('/encrypted/manifest');
                 if (!response.ok) {
                     throw new Error('Failed to load manifest');
                 }
@@ -371,7 +371,7 @@
             `;
 
             try {
-                const url = `/file?name=${encodeURIComponent(selectedFile)}&token=${encodeURIComponent(token)}`;
+                const url = `/encrypted/file?name=${encodeURIComponent(selectedFile)}&token=${encodeURIComponent(token)}`;
                 const response = await fetch(url);
                 
                 if (!response.ok) {
