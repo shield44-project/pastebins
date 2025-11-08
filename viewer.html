@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypted File Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .files-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .file-item {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            border-color: #667eea;
+            background: #f1f3ff;
+            transform: translateY(-2px);
+        }
+
+        .file-item.selected {
+            border-color: #667eea;
+            background: #e8ebff;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            word-break: break-word;
+        }
+
+        .file-encrypted {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .viewer {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .viewer.active {
+            display: block;
+        }
+
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .viewer-title {
+            color: #fff;
+            font-size: 1.2em;
+        }
+
+        .viewer-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #f5c6cb;
+            margin-top: 20px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #c3e6cb;
+            margin-top: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Encrypted File Viewer</h1>
+            <p class="subtitle">Server-side decryption with token authentication</p>
+        </header>
+
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">📁 Available Files</h2>
+            <div id="filesList" class="files-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading encrypted files...</p>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="input-group">
+                    <label for="tokenInput">Access Token:</label>
+                    <input type="text" id="tokenInput" placeholder="Paste your token here..." />
+                </div>
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    <button id="fetchBtn" disabled>🔓 Decrypt & View</button>
+                    <button id="refreshBtn" class="btn-secondary">🔄 Refresh List</button>
+                </div>
+            </div>
+
+            <div id="message"></div>
+
+            <div id="viewer" class="viewer">
+                <div class="viewer-header">
+                    <div class="viewer-title" id="viewerTitle">File Content</div>
+                    <div class="viewer-actions">
+                        <button id="copyBtn" class="btn-secondary">📋 Copy</button>
+                        <button id="closeBtn" class="btn-secondary">✕ Close</button>
+                    </div>
+                </div>
+                <pre><code id="fileContent"></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let manifest = {};
+        let selectedFile = null;
+
+        // Load manifest on page load
+        async function loadManifest() {
+            try {
+                const response = await fetch('/manifest');
+                if (!response.ok) {
+                    throw new Error('Failed to load manifest');
+                }
+                manifest = await response.json();
+                renderFilesList();
+            } catch (error) {
+                document.getElementById('filesList').innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                            <polyline points="13 2 13 9 20 9"></polyline>
+                        </svg>
+                        <p>No encrypted files found</p>
+                        <p style="font-size: 0.9em; margin-top: 10px;">Run encrypt_files.py to encrypt files first</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderFilesList() {
+            const filesList = document.getElementById('filesList');
+            
+            if (Object.keys(manifest).length === 0) {
+                filesList.innerHTML = `
+                    <div class="empty-state">
+                        <p>No files available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filesList.innerHTML = '';
+            
+            for (const [origName, encName] of Object.entries(manifest)) {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-name">${origName}</div>
+                    <div class="file-encrypted">🔒 ${encName}</div>
+                `;
+                
+                fileItem.addEventListener('click', () => {
+                    document.querySelectorAll('.file-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    fileItem.classList.add('selected');
+                    selectedFile = origName;
+                    updateFetchButton();
+                });
+                
+                filesList.appendChild(fileItem);
+            }
+        }
+
+        function updateFetchButton() {
+            const token = document.getElementById('tokenInput').value.trim();
+            const fetchBtn = document.getElementById('fetchBtn');
+            fetchBtn.disabled = !selectedFile || !token;
+        }
+
+        async function fetchAndDecrypt() {
+            const token = document.getElementById('tokenInput').value.trim();
+            const messageDiv = document.getElementById('message');
+            
+            if (!selectedFile || !token) {
+                return;
+            }
+
+            messageDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Decrypting ${selectedFile}...</p>
+                </div>
+            `;
+
+            try {
+                const url = `/file?name=${encodeURIComponent(selectedFile)}&token=${encodeURIComponent(token)}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Decryption failed');
+                }
+
+                const content = await response.text();
+                
+                // Display decrypted content
+                document.getElementById('viewerTitle').textContent = selectedFile;
+                document.getElementById('fileContent').textContent = content;
+                document.getElementById('viewer').classList.add('active');
+                
+                messageDiv.innerHTML = `
+                    <div class="success">
+                        ✓ Successfully decrypted ${selectedFile}
+                    </div>
+                `;
+                
+                // Scroll to viewer
+                document.getElementById('viewer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+            } catch (error) {
+                messageDiv.innerHTML = `
+                    <div class="error">
+                        ✗ Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function copyContent() {
+            const content = document.getElementById('fileContent').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        function closeViewer() {
+            document.getElementById('viewer').classList.remove('active');
+            document.getElementById('message').innerHTML = '';
+        }
+
+        // Event listeners
+        document.getElementById('tokenInput').addEventListener('input', updateFetchButton);
+        document.getElementById('fetchBtn').addEventListener('click', fetchAndDecrypt);
+        document.getElementById('refreshBtn').addEventListener('click', loadManifest);
+        document.getElementById('copyBtn').addEventListener('click', copyContent);
+        document.getElementById('closeBtn').addEventListener('click', closeViewer);
+
+        // Load manifest on page load
+        loadManifest();
+    </script>
+</body>
+</html>

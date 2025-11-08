@@ -7,3 +7,7 @@ __pycache__/
 .idea/
 *.swp
 *.swo
+
+# Encryption keys and encrypted files
+private_key.pem
+encrypted/
