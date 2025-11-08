@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}{{ code_info.title }} - HTML{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+<style>
+    .html-viewer-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .code-panel, .preview-panel {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #ecf0f1;
+    }
+    
+    .panel-header h2 {
+        margin: 0;
+        color: #2c3e50;
+    }
+    
+    .preview-frame {
+        width: 100%;
+        min-height: 500px;
+        border: 2px solid #ecf0f1;
+        border-radius: 5px;
+        background: white;
+    }
+    
+    .control-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-small {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    @media (max-width: 968px) {
+        .html-viewer-container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="code-viewer">
+    <div class="code-header">
+        <div>
+            <h1>{{ code_info.title }}</h1>
+            <p class="code-meta">HTML Website • Created: {{ code_info.created_at[:10] }}</p>
+            {% if code_info.description %}
+            <p class="code-description">{{ code_info.description }}</p>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('category', language='html') }}" class="btn btn-secondary">Back to HTML</a>
+    </div>
+
+    <div class="html-viewer-container">
+        <div class="code-panel">
+            <div class="panel-header">
+                <h2>HTML Code</h2>
+                <div class="control-buttons">
+                    <button id="copy-code" class="btn btn-secondary btn-small">📋 Copy Code</button>
+                </div>
+            </div>
+            <div class="code-editor-wrapper">
+                <textarea id="code-editor">{{ code_content }}</textarea>
+            </div>
+        </div>
+
+        <div class="preview-panel">
+            <div class="panel-header">
+                <h2>Live Preview</h2>
+                <div class="control-buttons">
+                    <button id="refresh-preview" class="btn btn-secondary btn-small">🔄 Refresh</button>
+                    <button id="fullscreen-preview" class="btn btn-secondary btn-small">⛶ Fullscreen</button>
+                </div>
+            </div>
+            <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+        </div>
+    </div>
+</div>
+
+<!-- Fullscreen Modal -->
+<div id="fullscreen-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999;">
+    <div style="position: absolute; top: 10px; right: 10px;">
+        <button id="close-fullscreen" class="btn btn-primary">✕ Close</button>
+    </div>
+    <iframe id="fullscreen-frame" style="width: 100%; height: 100%; border: none;" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+<script>
+    // Initialize CodeMirror
+    const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+        mode: 'htmlmixed',
+        theme: 'monokai',
+        lineNumbers: true,
+        readOnly: true,
+        viewportMargin: Infinity
+    });
+
+    // Load HTML in iframe
+    function loadPreview() {
+        const iframe = document.getElementById('preview-frame');
+        const renderUrl = '{{ url_for("render_html", language=language, code_id=code_id) }}';
+        iframe.src = renderUrl;
+    }
+
+    // Initial load
+    loadPreview();
+
+    // Copy code to clipboard
+    document.getElementById('copy-code').addEventListener('click', function() {
+        const code = editor.getValue();
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Copied!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        });
+    });
+
+    // Refresh preview
+    document.getElementById('refresh-preview').addEventListener('click', function() {
+        loadPreview();
+        const btn = this;
+        const originalText = btn.textContent;
+        btn.textContent = '⟳ Refreshing...';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 1000);
+    });
+
+    // Fullscreen preview
+    document.getElementById('fullscreen-preview').addEventListener('click', function() {
+        const modal = document.getElementById('fullscreen-modal');
+        const fullscreenFrame = document.getElementById('fullscreen-frame');
+        const renderUrl = '{{ url_for("render_html", language=language, code_id=code_id) }}';
+        fullscreenFrame.src = renderUrl;
+        modal.style.display = 'block';
+    });
+
+    // Close fullscreen
+    document.getElementById('close-fullscreen').addEventListener('click', function() {
+        const modal = document.getElementById('fullscreen-modal');
+        modal.style.display = 'none';
+        document.getElementById('fullscreen-frame').src = '';
+    });
+
+    // Close fullscreen with ESC key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('fullscreen-modal');
+            if (modal.style.display === 'block') {
+                modal.style.display = 'none';
+                document.getElementById('fullscreen-frame').src = '';
+            }
+        }
+    });
+</script>
+{% endblock %}

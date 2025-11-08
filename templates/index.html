@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Code Storage{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Welcome to Code Storage</h1>
+    <p>Store, view, categorize and execute your code files in Python, Java, C, C++, and HTML</p>
+    <a href="{{ url_for('upload_code') }}" class="btn btn-primary">Upload New Code</a>
+</div>
+
+<div class="categories">
+    <h2>Code Categories</h2>
+    <div class="category-grid">
+        <div class="category-card">
+            <div class="category-icon python-icon">🐍</div>
+            <h3>Python</h3>
+            <p>{{ categories.get('python', 0) }} files</p>
+            <a href="{{ url_for('category', language='python') }}" class="btn btn-secondary">View Python Codes</a>
+        </div>
+
+        <div class="category-card">
+            <div class="category-icon java-icon">☕</div>
+            <h3>Java</h3>
+            <p>{{ categories.get('java', 0) }} files</p>
+            <a href="{{ url_for('category', language='java') }}" class="btn btn-secondary">View Java Codes</a>
+        </div>
+
+        <div class="category-card">
+            <div class="category-icon c-icon">©️</div>
+            <h3>C</h3>
+            <p>{{ categories.get('c', 0) }} files</p>
+            <a href="{{ url_for('category', language='c') }}" class="btn btn-secondary">View C Codes</a>
+        </div>
+
+        <div class="category-card">
+            <div class="category-icon cpp-icon">⚙️</div>
+            <h3>C++</h3>
+            <p>{{ categories.get('cpp', 0) }} files</p>
+            <a href="{{ url_for('category', language='cpp') }}" class="btn btn-secondary">View C++ Codes</a>
+        </div>
+
+        <div class="category-card">
+            <div class="category-icon html-icon">🌐</div>
+            <h3>HTML</h3>
+            <p>{{ categories.get('html', 0) }} files</p>
+            <a href="{{ url_for('category', language='html') }}" class="btn btn-secondary">View HTML Websites</a>
+        </div>
+    </div>
+</div>
+
+<div class="features">
+    <h2>Features</h2>
+    <div class="feature-grid">
+        <div class="feature-item">
+            <h3>📁 Store Code</h3>
+            <p>Upload and organize your code files by language</p>
+        </div>
+        <div class="feature-item">
+            <h3>👁️ View Code</h3>
+            <p>Browse and view your stored code with syntax highlighting</p>
+        </div>
+        <div class="feature-item">
+            <h3>▶️ Execute Code</h3>
+            <p>Run your code and see the output directly in the browser</p>
+        </div>
+        <div class="feature-item">
+            <h3>🗂️ Categorize</h3>
+            <p>Automatically organize by language (Python, Java, C, C++, HTML)</p>
+        </div>
+        <div class="feature-item">
+            <h3>🌐 Run Websites</h3>
+            <p>Upload HTML files and view them running inside the website</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

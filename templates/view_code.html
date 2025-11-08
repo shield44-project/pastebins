@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{{ code_info.title }} - {{ language|title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="code-viewer">
+    <div class="code-header">
+        <div>
+            <h1>{{ code_info.title }}</h1>
+            <p class="code-meta">{{ language|title }} • Created: {{ code_info.created_at[:10] }}</p>
+            {% if code_info.description %}
+            <p class="code-description">{{ code_info.description }}</p>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('category', language=language) }}" class="btn btn-secondary">Back to {{ language|title }}</a>
+    </div>
+
+    <div class="code-content">
+        <h2>Code</h2>
+        <div class="code-editor-wrapper">
+            <textarea id="code-editor">{{ code_content }}</textarea>
+        </div>
+    </div>
+
+    <div class="execution-panel">
+        <div class="execution-controls">
+            <h2>Execute Code</h2>
+            <button id="run-code" class="btn btn-primary">▶️ Run Code</button>
+        </div>
+        
+        <div class="input-section">
+            <label for="stdin-input">Input (stdin):</label>
+            <textarea id="stdin-input" placeholder="Enter input for your program (optional)"></textarea>
+        </div>
+
+        <div class="output-section">
+            <h3>Output</h3>
+            <div id="output" class="output-display">
+                <p class="output-placeholder">Click "Run Code" to see the output</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+<script>
+    // Initialize CodeMirror
+    const languageModes = {
+        'python': 'python',
+        'java': 'text/x-java',
+        'c': 'text/x-csrc',
+        'cpp': 'text/x-c++src'
+    };
+
+    const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+        mode: languageModes['{{ language }}'],
+        theme: 'monokai',
+        lineNumbers: true,
+        readOnly: true,
+        viewportMargin: Infinity
+    });
+
+    // Execute code
+    document.getElementById('run-code').addEventListener('click', async function() {
+        const btn = this;
+        const output = document.getElementById('output');
+        const stdinInput = document.getElementById('stdin-input').value;
+        
+        btn.disabled = true;
+        btn.textContent = '⏳ Running...';
+        output.innerHTML = '<p class="output-loading">Executing code...</p>';
+
+        try {
+            const response = await fetch('{{ url_for("execute_code", language=language, code_id=code_id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ input: stdinInput })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                output.innerHTML = '<pre>' + escapeHtml(data.output || 'No output') + '</pre>';
+            } else {
+                output.innerHTML = '<pre class="output-error">' + escapeHtml(data.error) + '</pre>';
+            }
+        } catch (error) {
+            output.innerHTML = '<pre class="output-error">Error: ' + escapeHtml(error.message) + '</pre>';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '▶️ Run Code';
+        }
+    });
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}
