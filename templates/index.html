@@ -4,13 +4,16 @@
 
 {% block content %}
 <div class="hero">
-    <h1>Welcome to Code Storage</h1>
+    <h1>✨ Welcome to Code Storage ✨</h1>
     <p>Store, view, categorize and execute your code files in Python, Java, C, C++, and HTML</p>
-    <a href="{{ url_for('upload_code') }}" class="btn btn-primary">Upload New Code</a>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem;">
+        <a href="{{ url_for('upload_code') }}" class="btn btn-primary">📤 Upload New Code</a>
+        <a href="{{ url_for('encrypted_viewer') }}" class="btn btn-secondary">🔐 View Encrypted Files</a>
+    </div>
 </div>
 
 <div class="categories">
-    <h2>Code Categories</h2>
+    <h2>📚 Code Categories</h2>
     <div class="category-grid">
         <div class="category-card">
             <div class="category-icon python-icon">🐍</div>
@@ -50,7 +53,7 @@
 </div>
 
 <div class="features">
-    <h2>Features</h2>
+    <h2>🚀 Features</h2>
     <div class="feature-grid">
         <div class="feature-item">
             <h3>📁 Store Code</h3>
@@ -72,6 +75,21 @@
             <h3>🌐 Run Websites</h3>
             <p>Upload HTML files and view them running inside the website</p>
         </div>
+        <div class="feature-item">
+            <h3>🔐 Secure Encryption</h3>
+            <p>View encrypted Python code examples with token-based authentication</p>
+        </div>
+    </div>
+</div>
+
+<!-- Encrypted Files Info Section -->
+<div class="features" style="margin-top: 2rem;">
+    <h2>🔐 Encrypted File Viewer</h2>
+    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem;">
+        Access encrypted Python code examples with automatic token generation. No manual token entry required!
+    </p>
+    <div style="text-align: center;">
+        <a href="{{ url_for('encrypted_viewer') }}" class="btn btn-primary">🔓 Access Encrypted Files</a>
     </div>
 </div>
 {% endblock %}

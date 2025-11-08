@@ -493,8 +493,8 @@ def execute_code_file(language, code_path, stdin_input=''):
 # Encrypted Files Routes
 @app.route('/encrypted-viewer')
 def encrypted_viewer():
-    """Serve the encrypted files viewer page."""
-    return send_from_directory('.', 'viewer.html')
+    """Serve the encrypted files viewer page using template."""
+    return render_template('encrypted_viewer.html')
 
 @app.route('/encrypted/manifest')
 def encrypted_manifest():
