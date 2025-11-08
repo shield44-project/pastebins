@@ -243,11 +243,58 @@
             margin-bottom: 20px;
             opacity: 0.5;
         }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .subtitle {
+                font-size: 1em;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .files-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .viewer-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .viewer-actions button {
+                width: 100%;
+            }
+        }
+        
+        /* Back button */
+        .back-button {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            border: 2px solid white;
+        }
+        
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(-5px);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
+            <a href="index.html" class="back-button">← Back to Home</a>
             <h1>🔐 Encrypted File Viewer</h1>
             <p class="subtitle">Server-side decryption with token authentication</p>
         </header>
@@ -294,13 +341,15 @@
         // Load manifest on page load
         async function loadManifest() {
             try {
-                const response = await fetch('/encrypted/manifest');
+                // Try to fetch from the encrypted directory
+                const response = await fetch('encrypted/manifest.json');
                 if (!response.ok) {
                     throw new Error('Failed to load manifest');
                 }
                 manifest = await response.json();
                 renderFilesList();
             } catch (error) {
+                console.error('Error loading manifest:', error);
                 document.getElementById('filesList').innerHTML = `
                     <div class="empty-state">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -308,7 +357,11 @@
                             <polyline points="13 2 13 9 20 9"></polyline>
                         </svg>
                         <p>No encrypted files found</p>
-                        <p style="font-size: 0.9em; margin-top: 10px;">Run encrypt_files.py to encrypt files first</p>
+                        <p style="font-size: 0.9em; margin-top: 10px;">Encrypted files will be displayed here when available</p>
+                        <p style="font-size: 0.85em; margin-top: 10px; color: #999;">
+                            Note: This viewer requires a decryption server to function.<br>
+                            See the README for setup instructions.
+                        </p>
                     </div>
                 `;
             }
@@ -371,6 +424,7 @@
             `;
 
             try {
+                // Try to call decryption endpoint (works if backend is available)
                 const url = `/encrypted/file?name=${encodeURIComponent(selectedFile)}&token=${encodeURIComponent(token)}`;
                 const response = await fetch(url);
                 
@@ -396,9 +450,14 @@
                 document.getElementById('viewer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 
             } catch (error) {
+                console.error('Decryption error:', error);
                 messageDiv.innerHTML = `
                     <div class="error">
                         ✗ Error: ${error.message}
+                        <p style="margin-top: 10px; font-size: 0.9em;">
+                            This feature requires a running decryption server. 
+                            Please ensure the backend is running or deploy the Flask application.
+                        </p>
                     </div>
                 `;
             }
@@ -427,6 +486,13 @@
         document.getElementById('refreshBtn').addEventListener('click', loadManifest);
         document.getElementById('copyBtn').addEventListener('click', copyContent);
         document.getElementById('closeBtn').addEventListener('click', closeViewer);
+        
+        // Allow Enter key to submit
+        document.getElementById('tokenInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('fetchBtn').disabled) {
+                fetchAndDecrypt();
+            }
+        });
 
         // Load manifest on page load
         loadManifest();

@@ -1,0 +1,35 @@
+[build]
+  # No build command needed for static site
+  publish = "."
+  
+[build.environment]
+  # Netlify environment settings
+  NODE_VERSION = "18"
+
+[[redirects]]
+  # Redirect all non-existent paths to index.html for SPA behavior
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  
+[[headers]]
+  # Security headers
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+[[headers]]
+  # Cache static assets
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    
+[[headers]]
+  # Cache encrypted files
+  for = "/encrypted/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
