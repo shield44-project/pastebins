@@ -6,6 +6,204 @@
 <div class="upload-page">
     <h1>Upload New Code</h1>
     
+    <!-- Tab navigation -->
+    <div class="upload-tabs">
+        <button class="tab-btn active" onclick="switchTab('paste')">📝 Paste Code</button>
+        <button class="tab-btn" onclick="switchTab('files')">📁 Upload Files</button>
+    </div>
+    
+    <!-- Paste Code Tab -->
+    <form method="POST" action="{{ url_for('upload_code') }}" class="upload-form" id="pasteForm">
+        <div class="form-group">
+            <label for="language">Language *</label>
+            <select name="language" id="language" required>
+                <option value="">Select Language</option>
+                <option value="python">Python</option>
+                <option value="java">Java</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+                <option value="html">HTML/Website</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="title">Title *</label>
+            <input type="text" name="title" id="title" required placeholder="e.g., Hello World">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description (optional)</label>
+            <textarea name="description" id="description" rows="3" placeholder="Brief description of your code"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="code">Code *</label>
+            <textarea name="code" id="code" required rows="20" placeholder="Paste your code here..."></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Upload Code</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    
+    <!-- Upload Files Tab -->
+    <form method="POST" action="{{ url_for('upload_files') }}" enctype="multipart/form-data" class="upload-form" id="filesForm" style="display: none;">
+        <div class="form-group">
+            <label for="file_language">Language *</label>
+            <select name="language" id="file_language" required>
+                <option value="">Select Language</option>
+                <option value="python">Python</option>
+                <option value="java">Java</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+                <option value="html">HTML/Website</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="files">Select Files *</label>
+            <input type="file" name="files" id="files" multiple required accept=".py,.java,.c,.cpp,.html">
+            <p class="help-text">You can select multiple files at once. Files will be uploaded with their original names.</p>
+        </div>
+
+        <div id="filePreview" class="file-preview"></div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Upload Files</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.upload-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.tab-btn:hover {
+    color: #333;
+}
+
+.tab-btn.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+}
+
+.help-text {
+    font-size: 14px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.file-preview {
+    margin-top: 15px;
+}
+
+.file-preview-item {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.file-preview-item .file-icon {
+    font-size: 20px;
+}
+
+.file-preview-item .file-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.file-preview-item .file-size {
+    color: #666;
+    font-size: 14px;
+}
+</style>
+
+<script>
+function switchTab(tab) {
+    const pasteForm = document.getElementById('pasteForm');
+    const filesForm = document.getElementById('filesForm');
+    const tabs = document.querySelectorAll('.tab-btn');
+    
+    tabs.forEach(btn => btn.classList.remove('active'));
+    
+    if (tab === 'paste') {
+        pasteForm.style.display = 'block';
+        filesForm.style.display = 'none';
+        tabs[0].classList.add('active');
+    } else {
+        pasteForm.style.display = 'none';
+        filesForm.style.display = 'block';
+        tabs[1].classList.add('active');
+    }
+}
+
+// File preview
+document.getElementById('files')?.addEventListener('change', function(e) {
+    const preview = document.getElementById('filePreview');
+    preview.innerHTML = '';
+    
+    if (e.target.files.length > 0) {
+        const header = document.createElement('h3');
+        header.textContent = 'Selected Files:';
+        header.style.marginBottom = '10px';
+        preview.appendChild(header);
+        
+        Array.from(e.target.files).forEach(file => {
+            const item = document.createElement('div');
+            item.className = 'file-preview-item';
+            
+            const icon = document.createElement('span');
+            icon.className = 'file-icon';
+            icon.textContent = '📄';
+            
+            const name = document.createElement('span');
+            name.className = 'file-name';
+            name.textContent = file.name;
+            
+            const size = document.createElement('span');
+            size.className = 'file-size';
+            size.textContent = formatFileSize(file.size);
+            
+            item.appendChild(icon);
+            item.appendChild(name);
+            item.appendChild(size);
+            
+            preview.appendChild(item);
+        });
+    }
+});
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+</script>
+
+<div class="upload-page">
+    <h1>Upload New Code</h1>
+    
     <form method="POST" action="{{ url_for('upload_code') }}" class="upload-form">
         <div class="form-group">
             <label for="language">Language *</label>
