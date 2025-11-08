@@ -316,4 +316,9 @@ def execute_code_file(language, code_path, stdin_input=''):
 if __name__ == '__main__':
     # WARNING: debug=True is for development only. 
     # Set debug=False in production to prevent security vulnerabilities
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Use environment variable to control debug mode
+    debug_mode = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
+    host = os.environ.get('FLASK_HOST', '0.0.0.0')
+    port = int(os.environ.get('FLASK_PORT', '5000'))
+    
+    app.run(debug=debug_mode, host=host, port=port)
