@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Code{% endblock %}
+
+{% block content %}
+<div class="upload-page">
+    <h1>Upload New Code</h1>
+    
+    <form method="POST" action="{{ url_for('upload_code') }}" class="upload-form">
+        <div class="form-group">
+            <label for="language">Language *</label>
+            <select name="language" id="language" required>
+                <option value="">Select Language</option>
+                <option value="python">Python</option>
+                <option value="java">Java</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+                <option value="html">HTML/Website</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="title">Title *</label>
+            <input type="text" name="title" id="title" required placeholder="e.g., Hello World">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description (optional)</label>
+            <textarea name="description" id="description" rows="3" placeholder="Brief description of your code"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="code">Code *</label>
+            <textarea name="code" id="code" required rows="20" placeholder="Paste your code here..."></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Upload Code</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="upload-examples">
+    <h2>Quick Examples</h2>
+    <div class="example-grid">
+        <div class="example-card">
+            <h3>Python Example</h3>
+            <pre>print("Hello, World!")
+name = input("Enter your name: ")
+print(f"Hello, {name}!")</pre>
+        </div>
+        <div class="example-card">
+            <h3>Java Example</h3>
+            <pre>public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}</pre>
+        </div>
+        <div class="example-card">
+            <h3>C Example</h3>
+            <pre>#include &lt;stdio.h&gt;
+
+int main() {
+    printf("Hello, World!\n");
+    return 0;
+}</pre>
+        </div>
+        <div class="example-card">
+            <h3>C++ Example</h3>
+            <pre>#include &lt;iostream&gt;
+
+int main() {
+    std::cout &lt;&lt; "Hello, World!" &lt;&lt; std::endl;
+    return 0;
+}</pre>
+        </div>
+        <div class="example-card">
+            <h3>HTML Example</h3>
+            <pre>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;My Website&lt;/title&gt;
+    &lt;style&gt;
+        body { 
+            font-family: Arial;
+            text-align: center;
+            padding: 50px;
+        }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;Hello, World!&lt;/h1&gt;
+    &lt;p&gt;This is my website running inside the code storage platform!&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}
