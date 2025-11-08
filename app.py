@@ -257,6 +257,10 @@ def upload_code():
         if not title or not code_content:
             return jsonify({'error': 'Title and code are required'}), 400
         
+        # Validate title to prevent path traversal
+        if '/' in title or '\\' in title or title.startswith('.'):
+            return jsonify({'error': 'Invalid title - cannot contain path separators'}), 400
+        
         # Create language directory if it doesn't exist
         lang_dir = os.path.join(app.config['CODES_DIRECTORY'], language)
         os.makedirs(lang_dir, exist_ok=True)
@@ -264,8 +268,11 @@ def upload_code():
         # Load existing metadata
         metadata = load_code_metadata(language)
         
-        # Create filename based on title and extension
-        filename = f"{title.replace(' ', '_')}{LANGUAGES[language]['extension']}"
+        # Create filename based on title and extension - sanitize for filesystem
+        safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')
+        if not safe_title:
+            safe_title = 'unnamed'
+        filename = f"{safe_title}{LANGUAGES[language]['extension']}"
         filepath = os.path.join(lang_dir, filename)
         
         # Save the code file
@@ -514,9 +521,22 @@ def serve_encrypted_file():
     if not verify_token(token, filename):
         return jsonify({'error': 'Invalid or expired token'}), 403
     
+    # Validate filename to prevent path traversal
+    if '/' in filename or '\\' in filename or filename.startswith('.'):
+        return jsonify({'error': 'Invalid filename'}), 400
+    
     # Load encrypted file
     enc_filename = f"{filename}.enc.json"
     enc_path = Path(app.config['ENCRYPTED_DIRECTORY']) / enc_filename
+    
+    # Verify the path is within the encrypted directory (prevent path traversal)
+    try:
+        enc_path = enc_path.resolve()
+        encrypted_dir = Path(app.config['ENCRYPTED_DIRECTORY']).resolve()
+        if not str(enc_path).startswith(str(encrypted_dir)):
+            return jsonify({'error': 'Invalid file path'}), 400
+    except Exception:
+        return jsonify({'error': 'Invalid file path'}), 400
     
     if not enc_path.exists():
         return jsonify({'error': 'File not found'}), 404
