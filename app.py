@@ -189,22 +189,6 @@ LANGUAGES = {
         'compiler_flags': ['-o', 'program'],
         'type': 'code'
     },
-    'javascript': {
-        'extension': '.js',
-        'executor': 'node',
-        'compile': False,
-        'type': 'code'
-    },
-    'typescript': {
-        'extension': '.ts',
-        'executor': 'ts-node',
-        'compile': False,
-        'type': 'code'
-    },
-    'react': {
-        'extension': '.jsx',
-        'type': 'web'
-    },
     'html': {
         'extension': '.html',
         'type': 'web'
