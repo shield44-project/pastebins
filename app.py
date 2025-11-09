@@ -229,6 +229,11 @@ def get_code_file_path(language, filename):
     if language not in LANGUAGES:
         raise ValueError(f"Invalid language: {language}")
     
+    # Validate filename to prevent path traversal attacks
+    # Filename should not contain path separators or start with dots
+    if not filename or '/' in filename or '\\' in filename or filename.startswith('.'):
+        raise ValueError(f"Invalid filename: {filename}")
+    
     # Check writable directory first (for uploaded files)
     writable_path = os.path.join(app.config['CODES_DIRECTORY'], language, filename)
     if os.path.exists(writable_path):
