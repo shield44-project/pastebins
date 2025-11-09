@@ -301,6 +301,7 @@
 
         <div class="card">
             <h2 style="margin-bottom: 20px;">📁 Available Files</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">Click on any file to automatically decrypt and view it. Tokens are generated automatically by the server.</p>
             <div id="filesList" class="files-list">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -308,15 +309,8 @@
                 </div>
             </div>
 
-            <div class="controls">
-                <div class="input-group">
-                    <label for="tokenInput">Access Token:</label>
-                    <input type="text" id="tokenInput" placeholder="Paste your token here..." />
-                </div>
-                <div style="display: flex; gap: 10px; align-items: flex-end;">
-                    <button id="fetchBtn" disabled>🔓 Decrypt & View</button>
-                    <button id="refreshBtn" class="btn-secondary">🔄 Refresh List</button>
-                </div>
+            <div class="controls" style="justify-content: flex-end;">
+                <button id="refreshBtn" class="btn-secondary">🔄 Refresh List</button>
             </div>
 
             <div id="message"></div>
@@ -335,36 +329,22 @@
     </div>
 
     <script>
-        let manifest = {};
-        let selectedFile = null;
-        
-        // Hardcoded password in binary format: "shield44"
-        const binaryPassword = '01110011011010000110100101100101011011000110010000110100001101000';
-        
-        // Convert binary to string
-        function binaryToString(binary) {
-            return binary.match(/.{8}/g).map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
-        }
-        
-        // Auto-fill password on page load
-        window.addEventListener('DOMContentLoaded', function() {
-            const password = binaryToString(binaryPassword);
-            document.getElementById('tokenInput').value = password;
-            updateFetchButton();
-        });
+        let filesData = [];
+        let selectedFileData = null;
 
-        // Load manifest on page load
+        // Load files with tokens on page load
         async function loadManifest() {
             try {
-                // Try to fetch from the encrypted directory
-                const response = await fetch('encrypted/manifest.json');
+                // Fetch from the Flask API endpoint which includes tokens
+                const response = await fetch('/encrypted/list');
                 if (!response.ok) {
-                    throw new Error('Failed to load manifest');
+                    throw new Error('Failed to load files');
                 }
-                manifest = await response.json();
+                const data = await response.json();
+                filesData = data.files || [];
                 renderFilesList();
             } catch (error) {
-                console.error('Error loading manifest:', error);
+                console.error('Error loading files:', error);
                 document.getElementById('filesList').innerHTML = `
                     <div class="empty-state">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -385,7 +365,7 @@
         function renderFilesList() {
             const filesList = document.getElementById('filesList');
             
-            if (Object.keys(manifest).length === 0) {
+            if (filesData.length === 0) {
                 filesList.innerHTML = `
                     <div class="empty-state">
                         <p>No files available</p>
@@ -396,12 +376,12 @@
 
             filesList.innerHTML = '';
             
-            for (const [origName, encName] of Object.entries(manifest)) {
+            filesData.forEach(fileData => {
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-item';
                 fileItem.innerHTML = `
-                    <div class="file-name">${origName}</div>
-                    <div class="file-encrypted">🔒 ${encName}</div>
+                    <div class="file-name">${fileData.name}</div>
+                    <div class="file-encrypted">🔒 Encrypted</div>
                 `;
                 
                 fileItem.addEventListener('click', () => {
@@ -409,38 +389,31 @@
                         item.classList.remove('selected');
                     });
                     fileItem.classList.add('selected');
-                    selectedFile = origName;
-                    updateFetchButton();
+                    selectedFileData = fileData;
+                    fetchAndDecrypt();
                 });
                 
                 filesList.appendChild(fileItem);
-            }
-        }
-
-        function updateFetchButton() {
-            const token = document.getElementById('tokenInput').value.trim();
-            const fetchBtn = document.getElementById('fetchBtn');
-            fetchBtn.disabled = !selectedFile || !token;
+            });
         }
 
         async function fetchAndDecrypt() {
-            const token = document.getElementById('tokenInput').value.trim();
             const messageDiv = document.getElementById('message');
             
-            if (!selectedFile || !token) {
+            if (!selectedFileData) {
                 return;
             }
 
             messageDiv.innerHTML = `
                 <div class="loading">
                     <div class="spinner"></div>
-                    <p>Decrypting ${selectedFile}...</p>
+                    <p>Decrypting ${selectedFileData.name}...</p>
                 </div>
             `;
 
             try {
-                // Try to call decryption endpoint (works if backend is available)
-                const url = `/encrypted/file?name=${encodeURIComponent(selectedFile)}&token=${encodeURIComponent(token)}`;
+                // Use the pre-generated token from the API
+                const url = `/encrypted/file?name=${encodeURIComponent(selectedFileData.name)}&token=${encodeURIComponent(selectedFileData.token)}`;
                 const response = await fetch(url);
                 
                 if (!response.ok) {
@@ -451,13 +424,13 @@
                 const content = await response.text();
                 
                 // Display decrypted content
-                document.getElementById('viewerTitle').textContent = selectedFile;
+                document.getElementById('viewerTitle').textContent = selectedFileData.name;
                 document.getElementById('fileContent').textContent = content;
                 document.getElementById('viewer').classList.add('active');
                 
                 messageDiv.innerHTML = `
                     <div class="success">
-                        ✓ Successfully decrypted ${selectedFile}
+                        ✓ Successfully decrypted ${selectedFileData.name}
                     </div>
                 `;
                 
@@ -496,20 +469,11 @@
         }
 
         // Event listeners
-        document.getElementById('tokenInput').addEventListener('input', updateFetchButton);
-        document.getElementById('fetchBtn').addEventListener('click', fetchAndDecrypt);
         document.getElementById('refreshBtn').addEventListener('click', loadManifest);
         document.getElementById('copyBtn').addEventListener('click', copyContent);
         document.getElementById('closeBtn').addEventListener('click', closeViewer);
-        
-        // Allow Enter key to submit
-        document.getElementById('tokenInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !document.getElementById('fetchBtn').disabled) {
-                fetchAndDecrypt();
-            }
-        });
 
-        // Load manifest on page load
+        // Load files on page load
         loadManifest();
     </script>
 </body>
