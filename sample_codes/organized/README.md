@@ -1,6 +1,6 @@
-# Organized Code Templates
+# Organized Sample Code
 
-This directory contains sample code files organized by programming language. These files serve as examples and templates for various programming concepts.
+This directory contains sample code files organized by programming language. These files serve as examples for various programming concepts and can be used for testing the code execution features.
 
 ## Directory Structure
 
@@ -47,9 +47,16 @@ organized/
 These files can be used as:
 1. Learning examples for students
 2. Code snippets for reference
-3. Templates for new projects
-4. Testing samples for the code execution features
+3. Sample code for testing the application's code execution features
+4. Templates for new projects
+
+## Location
+
+These sample code files are stored in the `sample_codes/organized/` directory, separate from:
+- Flask HTML templates (in `templates/`)
+- User-uploaded code files (in `stored_codes/`)
+- Encrypted code examples (in `encrypted/`)
 
 ## Encryption
 
-Code files in this directory can be encrypted using the encryption tools provided in the parent directory. Encrypted versions are stored separately in the `encrypted/` directory.
+Code files in this directory can be encrypted using the encryption tools provided in the root directory. Encrypted versions are stored separately in the `encrypted/` directory.

@@ -206,20 +206,30 @@ codes_storer_website/
 ├── public_key.pem        # RSA public key (committed)
 ├── private_key.pem       # RSA private key (NOT committed, server-only)
 ├── viewer.html           # Encrypted file viewer (standalone page)
-├── templates/            # HTML templates
+├── templates/            # Flask HTML templates (Jinja2)
 │   ├── base.html         # Base template
 │   ├── index.html        # Home page
 │   ├── category.html     # Category listing page
 │   ├── upload.html       # Upload form (with multi-file support)
 │   ├── view_code.html    # Code viewer for executable languages
-│   └── view_html.html    # HTML website viewer with live preview
-├── static/               # Static assets
-│   └── css/
-│       └── style.css     # Stylesheet
+│   ├── view_html.html    # HTML website viewer with live preview
+│   └── encrypted_viewer.html  # Encrypted file viewer template
+├── sample_codes/         # Sample code files and examples (committed)
+│   ├── organized/        # Organized code examples by language
+│   │   ├── python/      # Python code examples
+│   │   ├── c/           # C programming examples
+│   │   ├── cpp/         # C++ programming examples
+│   │   └── html/        # HTML/CSS examples
+│   └── ...              # Other sample files and executables
+├── static/               # Static assets (CSS, JavaScript)
+│   ├── css/
+│   │   └── style.css     # Main stylesheet
+│   └── js/
+│       └── matrix-rain.js  # Matrix rain effect
 ├── encrypted/            # Encrypted Python code examples (committed)
 │   ├── manifest.json     # Index of encrypted files
 │   └── *.py.enc.json    # Encrypted Python files
-└── stored_codes/         # Storage directory (auto-created, not committed)
+└── stored_codes/         # User-uploaded code storage (auto-created, not committed)
     ├── python/           # Python files
     ├── java/             # Java files
     ├── c/                # C files
