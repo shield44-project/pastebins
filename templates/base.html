@@ -97,6 +97,54 @@
         });
     </script>
 
+    <script>
+        // Prevent inspect element on non-button elements (Rick Roll Easter Egg)
+        document.addEventListener('contextmenu', function(e) {
+            // Allow right-click on buttons, links, and input elements
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.tagName === 'A' || 
+                e.target.tagName === 'INPUT' ||
+                e.target.closest('button') ||
+                e.target.closest('a')) {
+                return; // Allow context menu on these elements
+            }
+            
+            // Otherwise, prevent and Rick Roll them!
+            e.preventDefault();
+            window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+        });
+
+        // Detect DevTools opening via keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // F12 or Ctrl+Shift+I or Ctrl+Shift+J or Ctrl+Shift+C or Ctrl+U
+            if (e.keyCode === 123 || // F12
+                (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+                (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+                (e.ctrlKey && e.shiftKey && e.keyCode === 67) || // Ctrl+Shift+C
+                (e.ctrlKey && e.keyCode === 85)) { // Ctrl+U
+                
+                e.preventDefault();
+                window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+            }
+        });
+
+        // Detect DevTools with window size check (more aggressive)
+        let devtoolsOpen = false;
+        const threshold = 160;
+        
+        setInterval(function() {
+            if (window.outerHeight - window.innerHeight > threshold || 
+                window.outerWidth - window.innerWidth > threshold) {
+                if (!devtoolsOpen) {
+                    devtoolsOpen = true;
+                    window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+                }
+            } else {
+                devtoolsOpen = false;
+            }
+        }, 1000);
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>
