@@ -179,7 +179,8 @@
     
     <div class="action-buttons">
         <a href="{{ url_for('upload_code') }}" class="primary-btn">📤 Upload New Code</a>
-        <a href="/encrypted-viewer" class="secondary-btn">🔐 Encrypted File Viewer</a>
+        <a href="{{ url_for('secret_folders') }}" class="secondary-btn">🔐 Secret Folders</a>
+        <a href="{{ url_for('all_files') }}" class="secondary-btn">📂 All Files</a>
     </div>
 </div>
 
