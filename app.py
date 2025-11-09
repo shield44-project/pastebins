@@ -244,8 +244,19 @@ def view_code(language, code_id):
     with open(code_path, 'r') as f:
         code_content = f.read()
     
+    # Check language type
+    lang_config = LANGUAGES[language]
+    
     # For HTML files, use a different template
     if language == 'html':
+        return render_template('view_html.html', 
+                             language=language, 
+                             code_id=code_id,
+                             code_info=code_info, 
+                             code_content=code_content)
+    
+    # For React/JSX files, use HTML viewer since they need to be rendered
+    if language == 'react':
         return render_template('view_html.html', 
                              language=language, 
                              code_id=code_id,
@@ -393,9 +404,10 @@ def execute_code(language, code_id):
     if language not in LANGUAGES:
         return jsonify({'error': 'Invalid language'}), 400
     
-    # HTML files don't need execution
-    if language == 'html':
-        return jsonify({'error': 'HTML files are rendered, not executed'}), 400
+    # HTML and React files don't need execution
+    lang_config = LANGUAGES[language]
+    if lang_config.get('type') == 'web' and language not in ['javascript', 'typescript']:
+        return jsonify({'error': 'This file type is rendered, not executed'}), 400
     
     metadata = load_code_metadata(language)
     if code_id >= len(metadata):
@@ -422,6 +434,10 @@ def execute_code_file(language, code_path, stdin_input=''):
     
     lang_config = LANGUAGES[language]
     
+    # Check if execution is supported
+    if lang_config.get('type') == 'web' and language != 'javascript':
+        return "Error: This language type is for web preview only"
+    
     with tempfile.TemporaryDirectory() as tmpdir:
         # Copy file to temp directory
         filename = os.path.basename(code_path)
@@ -429,7 +445,7 @@ def execute_code_file(language, code_path, stdin_input=''):
         # Validate filename to prevent command injection
         # Only allow alphanumeric, underscore, dash, and appropriate extension
         import re
-        if not re.match(r'^[\w\-]+\.(py|java|c|cpp)$', filename):
+        if not re.match(r'^[\w\-]+\.(py|java|c|cpp|js|ts)$', filename):
             return "Error: Invalid filename"
         
         temp_file = os.path.join(tmpdir, filename)
@@ -464,6 +480,9 @@ def execute_code_file(language, code_path, stdin_input=''):
                     if not re.match(r'^[\w]+$', class_name):
                         return "Error: Invalid class name"
                     execute_cmd = [lang_config['executor'], class_name]
+                elif language == 'typescript':
+                    # TypeScript requires ts-node
+                    execute_cmd = [lang_config['executor'], filename]
                 else:
                     # C/C++ compilation - using list form prevents shell injection
                     compile_cmd = [lang_config['compiler']] + lang_config['compiler_flags'] + [filename]
@@ -481,7 +500,7 @@ def execute_code_file(language, code_path, stdin_input=''):
                     
                     execute_cmd = [lang_config['executor']]
             else:
-                # Python - direct execution using list form
+                # Python/JavaScript - direct execution using list form
                 execute_cmd = [lang_config['executor'], filename]
             
             # Execute the code - using list form and shell=False for security

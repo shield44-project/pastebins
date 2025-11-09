@@ -52,13 +52,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
 <script>
     // Initialize CodeMirror
     const languageModes = {
         'python': 'python',
         'java': 'text/x-java',
         'c': 'text/x-csrc',
-        'cpp': 'text/x-c++src'
+        'cpp': 'text/x-c++src',
+        'javascript': 'javascript',
+        'typescript': 'text/typescript'
     };
 
     const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
