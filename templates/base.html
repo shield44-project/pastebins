@@ -18,8 +18,8 @@
                 <li><a href="{{ url_for('secret_folders') }}">🔐 Secret Folders</a></li>
                 <li>
                     <button class="theme-toggle" id="themeToggle">
-                        <span id="themeIcon">🌙</span>
-                        <span id="themeText">Dark</span>
+                        <span id="themeIcon">🎨</span>
+                        <span id="themeText">Theme</span>
                     </button>
                 </li>
             </ul>
@@ -33,39 +33,117 @@
     <footer>
         <div class="container">
             <p>&copy; 2025 NeonBin - Matrix Code Vault. Store, View, and Execute Your Code.</p>
+            <p>Created by <a href="https://github.com/shield44-project" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: none; font-weight: bold;">shield44</a> | <a href="https://github.com/shield44-project/pastebins" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: none;">View on GitHub</a></p>
         </div>
     </footer>
 
     <script>
-        // Theme toggle functionality
+        // Theme switcher functionality
         const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = document.getElementById('themeIcon');
-        const themeText = document.getElementById('themeText');
         const body = document.body;
 
+        // Available themes (Cyber Blue is now default/no class)
+        const themes = [
+            { name: 'Cyber Blue', class: '', icon: '💙' },
+            { name: 'Light Mode', class: 'theme-light', icon: '☀️' },
+            { name: 'Purple Haze', class: 'theme-purple', icon: '💜' },
+            { name: 'Fire Orange', class: 'theme-orange', icon: '🧡' },
+            { name: 'Pink Neon', class: 'theme-pink', icon: '💗' },
+            { name: 'Teal Wave', class: 'theme-teal', icon: '💚' }
+        ];
+
+        let currentThemeIndex = 0;
+
         // Load theme from localStorage
-        const currentTheme = localStorage.getItem('theme') || 'dark';
-        if (currentTheme === 'dark') {
-            body.classList.add('dark-theme');
-            themeIcon.textContent = '☀️';
-            themeText.textContent = 'Light';
+        const savedTheme = localStorage.getItem('neonbin-theme');
+        if (savedTheme !== null) {
+            const themeIndex = themes.findIndex(t => t.class === savedTheme);
+            if (themeIndex !== -1) {
+                currentThemeIndex = themeIndex;
+                if (savedTheme) {
+                    body.className = savedTheme;
+                }
+            }
+        }
+        // If no saved theme, default is Cyber Blue (no class needed)
+
+        // Update button text
+        function updateButtonText() {
+            const theme = themes[currentThemeIndex];
+            document.getElementById('themeIcon').textContent = theme.icon;
+            document.getElementById('themeText').textContent = theme.name;
         }
 
-        // Toggle theme
+        updateButtonText();
+
+        // Toggle to next theme
         themeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-theme');
-            const isDark = body.classList.contains('dark-theme');
+            // Remove current theme class
+            body.className = '';
             
-            if (isDark) {
-                themeIcon.textContent = '☀️';
-                themeText.textContent = 'Light';
-                localStorage.setItem('theme', 'dark');
-            } else {
-                themeIcon.textContent = '🌙';
-                themeText.textContent = 'Dark';
-                localStorage.setItem('theme', 'light');
+            // Move to next theme
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            const newTheme = themes[currentThemeIndex];
+            
+            // Apply new theme
+            if (newTheme.class) {
+                body.classList.add(newTheme.class);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('neonbin-theme', newTheme.class);
+            
+            // Update button
+            updateButtonText();
+        });
+    </script>
+
+    <script>
+        // Prevent inspect element on non-button elements (Rick Roll Easter Egg)
+        document.addEventListener('contextmenu', function(e) {
+            // Allow right-click on buttons, links, and input elements
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.tagName === 'A' || 
+                e.target.tagName === 'INPUT' ||
+                e.target.closest('button') ||
+                e.target.closest('a')) {
+                return; // Allow context menu on these elements
+            }
+            
+            // Otherwise, prevent and Rick Roll them!
+            e.preventDefault();
+            window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+        });
+
+        // Detect DevTools opening via keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // F12 or Ctrl+Shift+I or Ctrl+Shift+J or Ctrl+Shift+C or Ctrl+U
+            if (e.keyCode === 123 || // F12
+                (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+                (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+                (e.ctrlKey && e.shiftKey && e.keyCode === 67) || // Ctrl+Shift+C
+                (e.ctrlKey && e.keyCode === 85)) { // Ctrl+U
+                
+                e.preventDefault();
+                window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
             }
         });
+
+        // Detect DevTools with window size check (more aggressive)
+        let devtoolsOpen = false;
+        const threshold = 160;
+        
+        setInterval(function() {
+            if (window.outerHeight - window.innerHeight > threshold || 
+                window.outerWidth - window.innerWidth > threshold) {
+                if (!devtoolsOpen) {
+                    devtoolsOpen = true;
+                    window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+                }
+            } else {
+                devtoolsOpen = false;
+            }
+        }, 1000);
     </script>
 
     {% block extra_js %}{% endblock %}

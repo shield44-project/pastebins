@@ -14,6 +14,8 @@ import hmac
 import hashlib
 import time
 import shutil
+import urllib.request
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -83,6 +85,76 @@ def check_compiler_available(compiler):
     """Check if a compiler/interpreter is available in the system."""
     return shutil.which(compiler) is not None
 
+def execute_c_code_online(code_content, stdin_input=''):
+    """
+    Execute C code using an online compiler API.
+    Uses the Wandbox API (https://wandbox.org/).
+    """
+    try:
+        # Prepare the request to Wandbox API
+        url = 'https://wandbox.org/api/compile.json'
+        
+        # Prepare the payload for Wandbox
+        payload = {
+            'compiler': 'gcc-head',
+            'code': code_content,
+            'stdin': stdin_input,
+            'options': '',
+            'compiler-option-raw': '-O2 -Wall',
+            'runtime-option-raw': '',
+            'save': False
+        }
+        
+        # Send the request
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers=headers,
+            method='POST'
+        )
+        
+        with urllib.request.urlopen(req, timeout=30) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            
+            # Extract output
+            output = ''
+            
+            # Check for compilation error
+            if 'compiler_error' in result and result['compiler_error']:
+                output = 'Compilation Error:\n' + result['compiler_error']
+                return output
+            
+            # Check for compilation message (warnings)
+            if 'compiler_message' in result and result['compiler_message']:
+                output += result['compiler_message'] + '\n'
+            
+            # Get program output
+            if 'program_output' in result and result['program_output']:
+                output += result['program_output']
+            
+            # Check for program error
+            if 'program_error' in result and result['program_error']:
+                output += '\nErrors:\n' + result['program_error']
+            
+            # Check for execution status
+            if 'status' in result and result['status'] != '0':
+                if not output.strip():
+                    output = f"Program exited with status {result['status']}"
+            
+            return output if output.strip() else 'Program executed successfully with no output.'
+            
+    except urllib.error.URLError as e:
+        # Fallback message with helpful instructions
+        return f"Error: Unable to connect to online compiler service.\nPlease ensure you have an internet connection or install gcc locally to compile C code.\nDetails: {str(e)}"
+    except urllib.error.HTTPError as e:
+        return f"Error: Online compiler service returned an error (HTTP {e.code}).\nPlease try again later or install gcc locally."
+    except Exception as e:
+        return f"Error: Failed to execute code online.\nDetails: {str(e)}"
+
 # Ensure the codes directory exists
 os.makedirs(app.config['CODES_DIRECTORY'], exist_ok=True)
 
@@ -116,22 +188,6 @@ LANGUAGES = {
         'compiler': 'g++',
         'compiler_flags': ['-o', 'program'],
         'type': 'code'
-    },
-    'javascript': {
-        'extension': '.js',
-        'executor': 'node',
-        'compile': False,
-        'type': 'code'
-    },
-    'typescript': {
-        'extension': '.ts',
-        'executor': 'ts-node',
-        'compile': False,
-        'type': 'code'
-    },
-    'react': {
-        'extension': '.jsx',
-        'type': 'web'
     },
     'html': {
         'extension': '.html',
@@ -450,6 +506,7 @@ def upload_files():
     metadata = load_code_metadata(language)
     
     uploaded_count = 0
+    errors = []
     for file in files:
         if file and file.filename:
             # Secure the filename
@@ -465,36 +522,49 @@ def upload_files():
             
             filepath = os.path.join(lang_dir, filename)
             
-            # Handle encryption if requested
-            if encrypt:
-                # Read file content
-                content = file.read().decode('utf-8')
-                encrypted_data = encrypt_content_with_password(content, password)
-                # Save encrypted data
-                with open(filepath + '.enc', 'w') as f:
-                    json.dump(encrypted_data, f)
-            else:
-                # Save the file normally
-                file.save(filepath)
-            
-            # Add to metadata
-            title = filename.rsplit('.', 1)[0].replace('_', ' ').title()
-            code_info = {
-                'title': title,
-                'description': f'Uploaded from file: {filename}',
-                'filename': filename,
-                'created_at': datetime.now().isoformat(),
-                'encrypted': encrypt,
-                'is_secret': is_secret
-            }
-            metadata.append(code_info)
-            uploaded_count += 1
+            try:
+                # Handle encryption if requested
+                if encrypt:
+                    # Read file content
+                    file.seek(0)  # Reset file pointer to the beginning
+                    content = file.read().decode('utf-8')
+                    encrypted_data = encrypt_content_with_password(content, password)
+                    # Save encrypted data
+                    with open(filepath + '.enc', 'w') as f:
+                        json.dump(encrypted_data, f)
+                else:
+                    # Save the file normally
+                    file.seek(0)  # Reset file pointer to the beginning
+                    file.save(filepath)
+                
+                # Add to metadata
+                title = filename.rsplit('.', 1)[0].replace('_', ' ').title()
+                code_info = {
+                    'title': title,
+                    'description': f'Uploaded from file: {filename}',
+                    'filename': filename,
+                    'created_at': datetime.now().isoformat(),
+                    'encrypted': encrypt,
+                    'is_secret': is_secret
+                }
+                metadata.append(code_info)
+                uploaded_count += 1
+            except UnicodeDecodeError as e:
+                errors.append(f"{filename}: File encoding error - must be UTF-8")
+                app.logger.error(f"Upload error for {filename}: {str(e)}")
+            except Exception as e:
+                errors.append(f"{filename}: {str(e)}")
+                app.logger.error(f"Upload error for {filename}: {str(e)}")
     
     # Save updated metadata
-    save_code_metadata(language, metadata)
+    if uploaded_count > 0:
+        save_code_metadata(language, metadata)
     
     if uploaded_count == 0:
-        return jsonify({'error': 'No valid files were uploaded'}), 400
+        error_msg = 'No valid files were uploaded'
+        if errors:
+            error_msg += '. Errors: ' + '; '.join(errors)
+        return jsonify({'error': error_msg}), 400
     
     return redirect(url_for('category', language=language))
 
@@ -557,7 +627,18 @@ def execute_code_file(language, code_path, stdin_input=''):
     if lang_config.get('type') == 'web' and language != 'javascript':
         return "Error: This language type is for web preview only"
     
-    # Check if compiler/interpreter is available
+    # Read code content first
+    with open(code_path, 'r') as f:
+        code_content = f.read()
+    
+    # For C language, use online compiler if gcc is not available
+    if language == 'c':
+        compiler = lang_config['compiler']
+        if not check_compiler_available(compiler):
+            # Use online compiler for C code
+            return execute_c_code_online(code_content, stdin_input)
+    
+    # Check if compiler/interpreter is available for other languages
     if lang_config.get('compile'):
         compiler = lang_config['compiler']
         if not check_compiler_available(compiler):
@@ -579,9 +660,6 @@ def execute_code_file(language, code_path, stdin_input=''):
             return "Error: Invalid filename"
         
         temp_file = os.path.join(tmpdir, filename)
-        
-        with open(code_path, 'r') as f:
-            code_content = f.read()
         
         with open(temp_file, 'w') as f:
             f.write(code_content)
