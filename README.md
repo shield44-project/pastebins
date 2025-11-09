@@ -163,13 +163,17 @@ python app.py
 
 The repository includes encrypted Python code examples that can be viewed securely:
 
-1. Navigate to `/encrypted-viewer` on the running Flask app
-2. Select a Python file from the list of encrypted files
-3. Get an access token (automatically generated for 1 hour)
-4. Paste the token in the "Access Token" field
-5. Click "🔓 Decrypt & View" to see the decrypted code
+1. **Setup (First Time Only):**
+   - Place your `private_key.pem` in the root directory OR
+   - Run `python setup_encryption.py` for guided setup
+   - See [SETUP_ENCRYPTION.md](SETUP_ENCRYPTION.md) for detailed instructions
 
-**Note:** The private key required for decryption must be present on the server (`private_key.pem`). The encrypted code examples are stored in the `encrypted/` directory and can only be viewed through the secure web interface with valid authentication tokens.
+2. **Viewing Files:**
+   - Navigate to `/encrypted-viewer` on the running Flask app
+   - Click on any Python file from the list
+   - Files are automatically decrypted and displayed (no manual token entry needed!)
+
+**Note:** The system uses "shield44" as the default token secret for generating access tokens. The private key (`private_key.pem`) must be present for decryption to work. See [SETUP_ENCRYPTION.md](SETUP_ENCRYPTION.md) for more details.
 
 ### Viewing and Executing Code
 
