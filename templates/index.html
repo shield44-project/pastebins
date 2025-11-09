@@ -1,24 +1,219 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <style>
-        p{
-            background-color: red;
-            color:white;
-            height:2124px;
-            text-transform: capitalize;
-            line-height: 48px;
-            font-size:24px;
-            font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+{% extends "base.html" %}
 
-          
+{% block title %}NeonBin - Matrix Code Vault{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        text-align: center;
+        padding: 60px 20px;
+        color: #00ff00;
+    }
+    
+    .hero-title {
+        font-size: 3.5em;
+        margin-bottom: 20px;
+        text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        animation: glow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes glow {
+        from {
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5), 0 0 20px rgba(0, 255, 0, 0.3);
         }
-    </style>
-</head>
-<body>
-    <p class="1">Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia quaerat ullam natus perferendis similique aliquam voluptatum culpa maxime repellendus? Esse rem illum iure aliquam recusandae eveniet aperiam? Exercitationem minima dolorum cum itaque neque dolores soluta deserunt, perferendis doloribus adipisci obcaecati aut fugit quidem nobis qui dolor! Laudantium hic veniam dolor provident dolorum architecto sint sed fuga, itaque, consequuntur voluptas ipsum possimus iste esse recusandae! Quae, fugit aperiam ipsum, atque in tempora dicta, eius libero neque omnis incidunt amet est qui minima. Eius molestiae quis unde quia corrupti ut a magnam voluptates assumenda harum necessitatibus, vitae quaerat deserunt possimus omnis hic id laudantium quam reiciendis corporis autem? Dolorem eos eius, possimus ut, sed repudiandae facere est consequuntur a quo esse temporibus! Placeat natus facere hic blanditiis totam ipsa at commodi qui iure ea inventore molestiae veniam rerum, maxime architecto quibusdam voluptates. Nam velit hic modi quae nesciunt, libero perspiciatis delectus fugiat iste autem harum ducimus. Quis nihil repudiandae provident qui culpa, laborum, at asperiores iste soluta iusto non? Nesciunt eos in ducimus sapiente distinctio vero eaque neque molestias odio non. Ipsam libero maiores laboriosam eius, pariatur enim obcaecati cum. Quae, alias dolor praesentium distinctio numquam iste, porro, id eius laudantium voluptatem non dolorum omnis earum velit nostrum rerum facilis aperiam. Dolores modi unde eum quibusdam, id ad corrupti dolorum, ratione voluptatibus excepturi vitae animi quos placeat ea porro delectus! Facere, earum perspiciatis ea esse tempora nostrum cupiditate. Illum, molestiae. Nostrum dolorum, magni perferendis aliquam sint porro sunt. Labore veritatis repudiandae sint quia fuga, tempora, molestiae similique modi corrupti exercitationem mollitia eaque et quas in earum illum. Unde iste dolore magni deleniti quasi nihil ea illo perspiciatis reprehenderit laboriosam consequatur quia quam at officia debitis eius minima quidem consectetur eligendi non, animi fuga repudiandae. Voluptatem voluptatum unde, soluta, eveniet fuga repudiandae quae deleniti eum aspernatur minima architecto sint enim fugiat illum hic a explicabo voluptas doloribus esse iure nobis ut. Labore autem qui fuga maxime eaque, dolorem, eveniet soluta esse repellat neque debitis eius harum ipsum possimus, excepturi ut deleniti itaque voluptate suscipit laudantium sapiente quas. At.</p>
-</body>
-</html>
+        to {
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.8), 0 0 40px rgba(0, 255, 0, 0.5);
+        }
+    }
+    
+    .hero-subtitle {
+        font-size: 1.5em;
+        color: #b0b0b0;
+        margin-bottom: 40px;
+    }
+    
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+        padding: 40px 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .category-card {
+        background: rgba(15, 15, 25, 0.85);
+        border: 2px solid rgba(0, 255, 0, 0.3);
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+    }
+    
+    .category-card:hover {
+        transform: translateY(-10px);
+        border-color: rgba(0, 255, 0, 0.8);
+        box-shadow: 0 10px 40px rgba(0, 255, 0, 0.3);
+    }
+    
+    .category-icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+        display: block;
+    }
+    
+    .category-name {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #00ff00;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+    }
+    
+    .category-count {
+        font-size: 1.2em;
+        color: #b0b0b0;
+        margin-bottom: 20px;
+    }
+    
+    .category-btn {
+        background: linear-gradient(135deg, #00ff00, #00aa00);
+        color: #000;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 1em;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .category-btn:hover {
+        background: linear-gradient(135deg, #00ff00, #00cc00);
+        box-shadow: 0 5px 20px rgba(0, 255, 0, 0.5);
+        transform: scale(1.05);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        margin-top: 30px;
+        flex-wrap: wrap;
+    }
+    
+    .primary-btn {
+        background: linear-gradient(135deg, #00ff00, #00aa00);
+        color: #000;
+        padding: 15px 40px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 1.1em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .primary-btn:hover {
+        background: linear-gradient(135deg, #00ff00, #00cc00);
+        box-shadow: 0 5px 20px rgba(0, 255, 0, 0.5);
+        transform: translateY(-3px);
+    }
+    
+    .secondary-btn {
+        background: rgba(0, 255, 0, 0.1);
+        color: #00ff00;
+        padding: 15px 40px;
+        border: 2px solid #00ff00;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 1.1em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .secondary-btn:hover {
+        background: rgba(0, 255, 0, 0.2);
+        box-shadow: 0 5px 20px rgba(0, 255, 0, 0.3);
+        transform: translateY(-3px);
+    }
+    
+    .info-section {
+        max-width: 1200px;
+        margin: 60px auto;
+        padding: 40px;
+        background: rgba(15, 15, 25, 0.85);
+        border: 1px solid rgba(0, 255, 0, 0.3);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .info-title {
+        color: #00ff00;
+        font-size: 2em;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    
+    .info-text {
+        color: #b0b0b0;
+        font-size: 1.1em;
+        line-height: 1.8;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1 class="hero-title">💻 NEONBIN - MATRIX CODE VAULT</h1>
+    <p class="hero-subtitle">The ultimate code storage platform with neon aesthetics and advanced encryption</p>
+    
+    <div class="action-buttons">
+        <a href="{{ url_for('upload_code') }}" class="primary-btn">📤 Upload New Code</a>
+        <a href="/encrypted-viewer" class="secondary-btn">🔐 Encrypted File Viewer</a>
+    </div>
+</div>
+
+<div class="categories-grid">
+    {% for lang_key, lang_config in languages.items() %}
+    <div class="category-card" onclick="window.location.href='{{ url_for('category', language=lang_key) }}'">
+        <span class="category-icon">
+            {% if lang_key == 'python' %}🐍
+            {% elif lang_key == 'java' %}☕
+            {% elif lang_key == 'c' %}©️
+            {% elif lang_key == 'cpp' %}⚙️
+            {% elif lang_key == 'javascript' %}📜
+            {% elif lang_key == 'typescript' %}🔷
+            {% elif lang_key == 'react' %}⚛️
+            {% elif lang_key == 'html' %}🌐
+            {% else %}📄
+            {% endif %}
+        </span>
+        <div class="category-name">{{ lang_key }}</div>
+        <div class="category-count">{{ categories.get(lang_key, 0) }} files</div>
+        <button class="category-btn">View Files</button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="info-section">
+    <h2 class="info-title">✨ Welcome to NeonBin</h2>
+    <p class="info-text">
+        Store, view, and execute your code files with style. NeonBin supports multiple programming languages
+        including Python, Java, C, C++, JavaScript, TypeScript, React, and HTML. Features include syntax highlighting,
+        code execution, file encryption, and more. Experience the future of code storage with our neon-themed Matrix interface.
+    </p>
+</div>
+
+<!-- Matrix Rain Background Effect -->
+<script src="{{ url_for('static', filename='js/matrix-rain.js') }}"></script>
+{% endblock %}
