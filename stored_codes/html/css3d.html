@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transforms</title>
+    <style>
+        .master{
+            height:455px;
+            background-color: brown;
+        }
+        .box{
+            display:inline-block;
+            border: 3px solid black;
+            /* transform:translate(23px) rotate(34deg) ;
+            transform-origin:0;
+            transform:scaleX(3px);
+            transform:matrix3d(1,2,3,4,5,6); */
+        }
+        img{
+            width:56px;
+            height:34px;
+            /* transition-property: width;
+            transition-duration: 3s;
+            transition-timing-function: ease-in;
+            transition-delay:1s ; */
+            transition: width 3s ease-in 1s,height 4s ease-in;
+        }
+        img:hover{
+            width:996px;
+            height:996px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="master">
+        <div class="box"><img src="1.png" alt=""></div>
+        
+    </div>
+</body>
+</html>
