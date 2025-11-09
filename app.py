@@ -488,8 +488,9 @@ def execute_code_file(language, code_path, stdin_input=''):
         # Copy file to temp directory
         filename = os.path.basename(code_path)
         
-        # Validate filename to prevent command injection
+        # SECURITY: Validate filename to prevent command injection
         # Only allow alphanumeric, underscore, dash, and appropriate extension
+        # This validation occurs BEFORE any subprocess call
         import re
         if not re.match(r'^[\w\-]+\.(py|java|c|cpp|js|ts)$', filename):
             return "Error: Invalid filename"
