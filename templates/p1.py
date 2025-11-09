@@ -1,0 +1,5 @@
+a=int(input("a is :"))
+b=int(input("b is :"))
+print("Remainder of a/b is :", a % b)
+print(type(a))
+print("a is greater than b", a>b)
