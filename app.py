@@ -619,10 +619,13 @@ def list_folders():
 @app.route('/api/folders/<language>', methods=['POST'])
 def create_folder(language):
     """Create a folder for a specific language."""
-    # Validate language parameter
+    # SECURITY: Validate language parameter against whitelist to prevent path injection
+    # Only predefined language keys from LANGUAGES dict are allowed
     if language not in LANGUAGES:
         return jsonify({'error': 'Invalid language'}), 400
     
+    # Safe to use language here as it's validated against LANGUAGES whitelist
+    # The language value can only be one of: python, java, c, cpp, javascript, typescript, react, html
     folder_path = os.path.join(app.config['CODES_DIRECTORY'], language)
     
     # Create folder if it doesn't exist
@@ -630,11 +633,13 @@ def create_folder(language):
         os.makedirs(folder_path, exist_ok=True)
         return jsonify({
             'success': True,
-            'message': f'Folder created for {language}',
-            'path': folder_path
+            'message': f'Folder created for {language}'
+            # Don't expose internal path to user
         })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except OSError as e:
+        # Log the error but don't expose stack trace to user
+        app.logger.error(f'Failed to create folder for {language}: {e}')
+        return jsonify({'error': 'Failed to create folder'}), 500
 
 if __name__ == '__main__':
     # WARNING: debug=True is for development only. 
