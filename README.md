@@ -2,6 +2,8 @@
 
 A comprehensive web application for storing, viewing, categorizing, and executing code files. This platform supports multiple programming languages and allows you to run HTML websites within the application.
 
+**🎉 Now with TypeScript and React support!** The project includes a modern frontend built with TypeScript and React. See [TYPESCRIPT_REACT_SETUP.md](TYPESCRIPT_REACT_SETUP.md) for details.
+
 ## Features
 
 ### 📁 Code Storage & Organization
@@ -253,13 +255,46 @@ codes_storer_website/
 
 ## Technologies Used
 
-- **Backend**: Flask (Python web framework)
-- **Frontend**: HTML5, CSS3, JavaScript
-- **Code Editor**: CodeMirror (syntax highlighting)
-- **Styling**: Custom CSS with responsive design
-- **Code Execution**: subprocess (Python), compilers (javac, gcc, g++)
-- **Encryption**: cryptography library (RSA-OAEP, AES-GCM)
-- **Authentication**: HMAC-SHA256 signed tokens
+### Backend
+- **Flask**: Python web framework
+- **Python 3**: Core backend language
+- **Cryptography**: RSA-OAEP, AES-GCM encryption
+- **HMAC-SHA256**: Token-based authentication
+
+### Frontend
+- **TypeScript**: Type-safe JavaScript development
+- **React**: Component-based UI framework
+- **Webpack**: Module bundler and build tool
+- **HTML5, CSS3**: Modern web standards
+- **JavaScript (ES6+)**: Modern JavaScript features
+
+### Development Tools
+- **Node.js & npm**: Package management
+- **ts-loader**: TypeScript compilation for Webpack
+- **CodeMirror**: Syntax highlighting
+
+### Code Execution
+- **subprocess**: Python code execution
+- **Compilers**: javac (Java), gcc (C), g++ (C++)
+
+## Frontend Development
+
+This project now includes a modern TypeScript/React frontend. For detailed information about the frontend setup, see [TYPESCRIPT_REACT_SETUP.md](TYPESCRIPT_REACT_SETUP.md).
+
+### Quick Start (Frontend)
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Build for production
+npm run build
+```
+
+The React app runs on `http://localhost:3000` during development, while the Flask backend runs on `http://localhost:5000`.
 
 ## Browser Compatibility
 
