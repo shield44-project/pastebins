@@ -450,6 +450,7 @@ def upload_files():
     metadata = load_code_metadata(language)
     
     uploaded_count = 0
+    errors = []
     for file in files:
         if file and file.filename:
             # Secure the filename
@@ -465,36 +466,49 @@ def upload_files():
             
             filepath = os.path.join(lang_dir, filename)
             
-            # Handle encryption if requested
-            if encrypt:
-                # Read file content
-                content = file.read().decode('utf-8')
-                encrypted_data = encrypt_content_with_password(content, password)
-                # Save encrypted data
-                with open(filepath + '.enc', 'w') as f:
-                    json.dump(encrypted_data, f)
-            else:
-                # Save the file normally
-                file.save(filepath)
-            
-            # Add to metadata
-            title = filename.rsplit('.', 1)[0].replace('_', ' ').title()
-            code_info = {
-                'title': title,
-                'description': f'Uploaded from file: {filename}',
-                'filename': filename,
-                'created_at': datetime.now().isoformat(),
-                'encrypted': encrypt,
-                'is_secret': is_secret
-            }
-            metadata.append(code_info)
-            uploaded_count += 1
+            try:
+                # Handle encryption if requested
+                if encrypt:
+                    # Read file content
+                    file.seek(0)  # Reset file pointer to the beginning
+                    content = file.read().decode('utf-8')
+                    encrypted_data = encrypt_content_with_password(content, password)
+                    # Save encrypted data
+                    with open(filepath + '.enc', 'w') as f:
+                        json.dump(encrypted_data, f)
+                else:
+                    # Save the file normally
+                    file.seek(0)  # Reset file pointer to the beginning
+                    file.save(filepath)
+                
+                # Add to metadata
+                title = filename.rsplit('.', 1)[0].replace('_', ' ').title()
+                code_info = {
+                    'title': title,
+                    'description': f'Uploaded from file: {filename}',
+                    'filename': filename,
+                    'created_at': datetime.now().isoformat(),
+                    'encrypted': encrypt,
+                    'is_secret': is_secret
+                }
+                metadata.append(code_info)
+                uploaded_count += 1
+            except UnicodeDecodeError as e:
+                errors.append(f"{filename}: File encoding error - must be UTF-8")
+                app.logger.error(f"Upload error for {filename}: {str(e)}")
+            except Exception as e:
+                errors.append(f"{filename}: {str(e)}")
+                app.logger.error(f"Upload error for {filename}: {str(e)}")
     
     # Save updated metadata
-    save_code_metadata(language, metadata)
+    if uploaded_count > 0:
+        save_code_metadata(language, metadata)
     
     if uploaded_count == 0:
-        return jsonify({'error': 'No valid files were uploaded'}), 400
+        error_msg = 'No valid files were uploaded'
+        if errors:
+            error_msg += '. Errors: ' + '; '.join(errors)
+        return jsonify({'error': error_msg}), 400
     
     return redirect(url_for('category', language=language))
 

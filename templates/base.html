@@ -16,12 +16,6 @@
                 <li><a href="{{ url_for('all_files') }}">📚 All Files</a></li>
                 <li><a href="{{ url_for('upload_code') }}">📤 Upload Code</a></li>
                 <li><a href="{{ url_for('secret_folders') }}">🔐 Secret Folders</a></li>
-                <li>
-                    <button class="theme-toggle" id="themeToggle">
-                        <span id="themeIcon">🌙</span>
-                        <span id="themeText">Dark</span>
-                    </button>
-                </li>
             </ul>
         </div>
     </nav>
@@ -35,38 +29,6 @@
             <p>&copy; 2025 NeonBin - Matrix Code Vault. Store, View, and Execute Your Code.</p>
         </div>
     </footer>
-
-    <script>
-        // Theme toggle functionality
-        const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = document.getElementById('themeIcon');
-        const themeText = document.getElementById('themeText');
-        const body = document.body;
-
-        // Load theme from localStorage
-        const currentTheme = localStorage.getItem('theme') || 'dark';
-        if (currentTheme === 'dark') {
-            body.classList.add('dark-theme');
-            themeIcon.textContent = '☀️';
-            themeText.textContent = 'Light';
-        }
-
-        // Toggle theme
-        themeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-theme');
-            const isDark = body.classList.contains('dark-theme');
-            
-            if (isDark) {
-                themeIcon.textContent = '☀️';
-                themeText.textContent = 'Light';
-                localStorage.setItem('theme', 'dark');
-            } else {
-                themeIcon.textContent = '🌙';
-                themeText.textContent = 'Dark';
-                localStorage.setItem('theme', 'light');
-            }
-        });
-    </script>
 
     {% block extra_js %}{% endblock %}
 </body>
