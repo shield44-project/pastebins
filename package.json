@@ -4,7 +4,8 @@
   "description": "A comprehensive web application for storing, viewing, categorizing, and executing code files. This platform supports multiple programming languages and allows you to run HTML websites within the application.",
   "main": "index.js",
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "webpack --config webpack.prod.config.js",
+    "build:dev": "webpack --mode development",
     "dev": "webpack serve --mode development",
     "start": "webpack serve --mode development --open",
     "test": "echo \"Error: no test specified\" && exit 1"
