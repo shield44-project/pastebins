@@ -337,6 +337,21 @@
     <script>
         let manifest = {};
         let selectedFile = null;
+        
+        // Hardcoded password in binary format: "shield44"
+        const binaryPassword = '01110011011010000110100101100101011011000110010000110100001101000';
+        
+        // Convert binary to string
+        function binaryToString(binary) {
+            return binary.match(/.{8}/g).map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
+        }
+        
+        // Auto-fill password on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const password = binaryToString(binaryPassword);
+            document.getElementById('tokenInput').value = password;
+            updateFetchButton();
+        });
 
         // Load manifest on page load
         async function loadManifest() {
