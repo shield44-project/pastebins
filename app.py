@@ -219,6 +219,37 @@ def index():
         categories[lang] = len(metadata)
     return render_template('index.html', categories=categories, languages=LANGUAGES)
 
+@app.route('/all-files')
+def all_files():
+    """Show all code files from all languages"""
+    all_files_list = []
+    language_counts = {}
+    
+    for lang in LANGUAGES:
+        metadata = load_code_metadata(lang)
+        language_counts[lang] = len(metadata)
+        
+        for idx, code_info in enumerate(metadata):
+            file_entry = {
+                'id': idx,
+                'language': lang,
+                'title': code_info['title'],
+                'description': code_info.get('description', ''),
+                'filename': code_info['filename'],
+                'created_at': code_info['created_at']
+            }
+            all_files_list.append(file_entry)
+    
+    # Sort by creation date (newest first)
+    all_files_list.sort(key=lambda x: x['created_at'], reverse=True)
+    
+    total_files = len(all_files_list)
+    
+    return render_template('all_files.html', 
+                         all_files=all_files_list,
+                         total_files=total_files,
+                         language_counts=language_counts)
+
 @app.route('/category/<language>')
 def category(language):
     """Show all codes for a specific language"""
