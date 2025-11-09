@@ -81,6 +81,22 @@ LANGUAGES = {
         'compiler_flags': ['-o', 'program'],
         'type': 'code'
     },
+    'javascript': {
+        'extension': '.js',
+        'executor': 'node',
+        'compile': False,
+        'type': 'code'
+    },
+    'typescript': {
+        'extension': '.ts',
+        'executor': 'ts-node',
+        'compile': False,
+        'type': 'code'
+    },
+    'react': {
+        'extension': '.jsx',
+        'type': 'web'
+    },
     'html': {
         'extension': '.html',
         'type': 'web'
@@ -579,6 +595,51 @@ def list_encrypted_files():
             'view_url': f"/encrypted/file?name={orig_name}&token={token}"
         })
     return jsonify({'files': files})
+
+@app.route('/api/folders', methods=['GET'])
+def list_folders():
+    """List all language folders and their file counts."""
+    folders = []
+    for language, config in LANGUAGES.items():
+        folder_path = os.path.join(app.config['CODES_DIRECTORY'], language)
+        if os.path.exists(folder_path):
+            file_count = len([f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))])
+        else:
+            file_count = 0
+        
+        folders.append({
+            'language': language,
+            'extension': config.get('extension', ''),
+            'file_count': file_count,
+            'type': config.get('type', 'code')
+        })
+    
+    return jsonify({'folders': folders})
+
+@app.route('/api/folders/<language>', methods=['POST'])
+def create_folder(language):
+    """Create a folder for a specific language."""
+    # SECURITY: Validate language parameter against whitelist to prevent path injection
+    # Only predefined language keys from LANGUAGES dict are allowed
+    if language not in LANGUAGES:
+        return jsonify({'error': 'Invalid language'}), 400
+    
+    # Safe to use language here as it's validated against LANGUAGES whitelist
+    # The language value can only be one of: python, java, c, cpp, javascript, typescript, react, html
+    folder_path = os.path.join(app.config['CODES_DIRECTORY'], language)
+    
+    # Create folder if it doesn't exist
+    try:
+        os.makedirs(folder_path, exist_ok=True)
+        return jsonify({
+            'success': True,
+            'message': f'Folder created for {language}'
+            # Don't expose internal path to user
+        })
+    except OSError as e:
+        # Log the error but don't expose stack trace to user
+        app.logger.error(f'Failed to create folder for {language}: {e}')
+        return jsonify({'error': 'Failed to create folder'}), 500
 
 if __name__ == '__main__':
     # WARNING: debug=True is for development only. 
