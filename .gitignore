@@ -45,3 +45,7 @@ yarn.lock
 
 # TypeScript
 *.tsbuildinfo
+
+# Vercel
+.vercel
+.vercel.json
