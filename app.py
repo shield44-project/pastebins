@@ -13,6 +13,7 @@ import base64
 import hmac
 import hashlib
 import time
+import shutil
 from datetime import datetime
 from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -28,7 +29,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
 # Load private key for decryption (if available)
 PRIVATE_KEY = None
-ENCRYPTION_SECRET = os.environ.get('TOKEN_SECRET', 'dev-secret-change-in-production')
+ENCRYPTION_SECRET = os.environ.get('TOKEN_SECRET', 'shield44')
 
 def load_private_key():
     """Load RSA private key from file if it exists."""
@@ -46,6 +47,10 @@ def load_private_key():
     return None
 
 PRIVATE_KEY = load_private_key()
+
+def check_compiler_available(compiler):
+    """Check if a compiler/interpreter is available in the system."""
+    return shutil.which(compiler) is not None
 
 # Ensure the codes directory exists
 os.makedirs(app.config['CODES_DIRECTORY'], exist_ok=True)
@@ -469,6 +474,16 @@ def execute_code_file(language, code_path, stdin_input=''):
     if lang_config.get('type') == 'web' and language != 'javascript':
         return "Error: This language type is for web preview only"
     
+    # Check if compiler/interpreter is available
+    if lang_config.get('compile'):
+        compiler = lang_config['compiler']
+        if not check_compiler_available(compiler):
+            return f"Error: {compiler} compiler is not installed or not found in PATH. Please install {compiler} to execute {language} code."
+    else:
+        executor = lang_config['executor']
+        if not check_compiler_available(executor):
+            return f"Error: {executor} is not installed or not found in PATH. Please install {executor} to execute {language} code."
+    
     with tempfile.TemporaryDirectory() as tmpdir:
         # Copy file to temp directory
         filename = os.path.basename(code_path)
@@ -493,14 +508,17 @@ def execute_code_file(language, code_path, stdin_input=''):
                 if language == 'java':
                     # Java compilation - using list form prevents shell injection
                     compile_cmd = [lang_config['compiler'], filename]
-                    compile_result = subprocess.run(
-                        compile_cmd,
-                        cwd=tmpdir,
-                        capture_output=True,
-                        text=True,
-                        timeout=10,
-                        shell=False  # Explicitly set shell=False for security
-                    )
+                    try:
+                        compile_result = subprocess.run(
+                            compile_cmd,
+                            cwd=tmpdir,
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                            shell=False  # Explicitly set shell=False for security
+                        )
+                    except FileNotFoundError:
+                        return f"Error: {lang_config['compiler']} compiler not found. Please install Java JDK to compile Java code."
                     
                     if compile_result.returncode != 0:
                         return f"Compilation Error:\n{compile_result.stderr}"
@@ -517,14 +535,18 @@ def execute_code_file(language, code_path, stdin_input=''):
                 else:
                     # C/C++ compilation - using list form prevents shell injection
                     compile_cmd = [lang_config['compiler']] + lang_config['compiler_flags'] + [filename]
-                    compile_result = subprocess.run(
-                        compile_cmd,
-                        cwd=tmpdir,
-                        capture_output=True,
-                        text=True,
-                        timeout=10,
-                        shell=False  # Explicitly set shell=False for security
-                    )
+                    try:
+                        compile_result = subprocess.run(
+                            compile_cmd,
+                            cwd=tmpdir,
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                            shell=False  # Explicitly set shell=False for security
+                        )
+                    except FileNotFoundError:
+                        compiler_name = "GCC" if language == 'c' else "G++"
+                        return f"Error: {lang_config['compiler']} compiler not found. Please install {compiler_name} to compile {language.upper()} code."
                     
                     if compile_result.returncode != 0:
                         return f"Compilation Error:\n{compile_result.stderr}"
@@ -535,15 +557,27 @@ def execute_code_file(language, code_path, stdin_input=''):
                 execute_cmd = [lang_config['executor'], filename]
             
             # Execute the code - using list form and shell=False for security
-            result = subprocess.run(
-                execute_cmd,
-                cwd=tmpdir,
-                input=stdin_input,
-                capture_output=True,
-                text=True,
-                timeout=5,
-                shell=False  # Explicitly set shell=False for security
-            )
+            try:
+                result = subprocess.run(
+                    execute_cmd,
+                    cwd=tmpdir,
+                    input=stdin_input,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    shell=False  # Explicitly set shell=False for security
+                )
+            except FileNotFoundError:
+                executor_name = lang_config['executor']
+                if language == 'python':
+                    executor_name = "Python 3"
+                elif language == 'java':
+                    executor_name = "Java Runtime (JRE)"
+                elif language == 'javascript':
+                    executor_name = "Node.js"
+                elif language == 'typescript':
+                    executor_name = "ts-node"
+                return f"Error: {lang_config['executor']} not found. Please install {executor_name} to execute {language} code."
             
             output = result.stdout
             if result.stderr:
