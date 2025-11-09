@@ -265,13 +265,14 @@ def get_code_file_path(language, filename):
 
 def load_code_metadata(language):
     """Load metadata for codes in a specific language"""
-    # Validate language parameter
+    # SECURITY: Validate language parameter against whitelist
     if language not in LANGUAGES:
         return []
     
     all_metadata = []
     
     # Try to load from writable directory first (for uploaded files)
+    # Safe: get_code_metadata_path validates language parameter
     metadata_path = get_code_metadata_path(language)
     if os.path.exists(metadata_path):
         with open(metadata_path, 'r') as f:
@@ -279,7 +280,14 @@ def load_code_metadata(language):
     
     # On Vercel, also load from read-only directory (for pre-deployed files)
     if app.config.get('READONLY_CODES_DIRECTORY'):
-        readonly_path = os.path.join(app.config['READONLY_CODES_DIRECTORY'], f'{language}_metadata.json')
+        # Safe: language is whitelisted above, only alphanumeric names allowed in LANGUAGES
+        base_readonly = app.config['READONLY_CODES_DIRECTORY']
+        readonly_path = os.path.normpath(os.path.join(base_readonly, f'{language}_metadata.json'))
+        
+        # SECURITY: Verify path stays within expected directory (defense in depth)
+        if not readonly_path.startswith(os.path.abspath(base_readonly)):
+            return all_metadata  # Skip readonly if path traversal detected
+        
         if os.path.exists(readonly_path):
             with open(readonly_path, 'r') as f:
                 readonly_metadata = json.load(f)
