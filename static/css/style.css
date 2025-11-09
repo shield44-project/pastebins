@@ -6,7 +6,7 @@
 }
 
 :root {
-    /* Light theme (default) - Neon Green */
+    /* Default theme - Neon Green Matrix */
     --bg-primary: #0a0a0a;
     --bg-secondary: #0f0f19;
     --text-primary: #00ff00;
@@ -20,8 +20,83 @@
     --neon-glow: rgba(0, 255, 0, 0.8);
 }
 
+/* Cyber Blue Theme */
+body.theme-cyber-blue {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #0f1624;
+    --text-primary: #00d9ff;
+    --text-secondary: #a0b0c0;
+    --nav-bg: #000510;
+    --nav-text: #00d9ff;
+    --accent-primary: #00d9ff;
+    --accent-hover: #00b3d9;
+    --border-color: rgba(0, 217, 255, 0.3);
+    --card-shadow: rgba(0, 217, 255, 0.2);
+    --neon-glow: rgba(0, 217, 255, 0.8);
+}
+
+/* Purple Haze Theme */
+body.theme-purple {
+    --bg-primary: #0f0a1a;
+    --bg-secondary: #1a0f2e;
+    --text-primary: #c77dff;
+    --text-secondary: #b0a0c0;
+    --nav-bg: #0a0515;
+    --nav-text: #c77dff;
+    --accent-primary: #c77dff;
+    --accent-hover: #b366ff;
+    --border-color: rgba(199, 125, 255, 0.3);
+    --card-shadow: rgba(199, 125, 255, 0.2);
+    --neon-glow: rgba(199, 125, 255, 0.8);
+}
+
+/* Fire Orange Theme */
+body.theme-orange {
+    --bg-primary: #1a0a00;
+    --bg-secondary: #2a1505;
+    --text-primary: #ff6b35;
+    --text-secondary: #c0b0a0;
+    --nav-bg: #100500;
+    --nav-text: #ff6b35;
+    --accent-primary: #ff6b35;
+    --accent-hover: #ff8555;
+    --border-color: rgba(255, 107, 53, 0.3);
+    --card-shadow: rgba(255, 107, 53, 0.2);
+    --neon-glow: rgba(255, 107, 53, 0.8);
+}
+
+/* Pink Neon Theme */
+body.theme-pink {
+    --bg-primary: #1a0a14;
+    --bg-secondary: #2a0f1f;
+    --text-primary: #ff006e;
+    --text-secondary: #c0a0b0;
+    --nav-bg: #0f0509;
+    --nav-text: #ff006e;
+    --accent-primary: #ff006e;
+    --accent-hover: #ff338a;
+    --border-color: rgba(255, 0, 110, 0.3);
+    --card-shadow: rgba(255, 0, 110, 0.2);
+    --neon-glow: rgba(255, 0, 110, 0.8);
+}
+
+/* Teal Wave Theme */
+body.theme-teal {
+    --bg-primary: #0a1a1a;
+    --bg-secondary: #0f2a2a;
+    --text-primary: #00ffc8;
+    --text-secondary: #a0c0b8;
+    --nav-bg: #05100f;
+    --nav-text: #00ffc8;
+    --accent-primary: #00ffc8;
+    --accent-hover: #00d9a3;
+    --border-color: rgba(0, 255, 200, 0.3);
+    --card-shadow: rgba(0, 255, 200, 0.2);
+    --neon-glow: rgba(0, 255, 200, 0.8);
+}
+
 body.dark-theme {
-    /* Dark theme - Same as light for neon theme */
+    /* Keep for backwards compatibility */
     --bg-primary: #0a0a0a;
     --bg-secondary: #0f0f19;
     --text-primary: #00ff00;

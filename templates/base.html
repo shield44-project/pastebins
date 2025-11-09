@@ -16,6 +16,12 @@
                 <li><a href="{{ url_for('all_files') }}">📚 All Files</a></li>
                 <li><a href="{{ url_for('upload_code') }}">📤 Upload Code</a></li>
                 <li><a href="{{ url_for('secret_folders') }}">🔐 Secret Folders</a></li>
+                <li>
+                    <button class="theme-toggle" id="themeToggle">
+                        <span id="themeIcon">🎨</span>
+                        <span id="themeText">Theme</span>
+                    </button>
+                </li>
             </ul>
         </div>
     </nav>
@@ -29,6 +35,66 @@
             <p>&copy; 2025 NeonBin - Matrix Code Vault. Store, View, and Execute Your Code.</p>
         </div>
     </footer>
+
+    <script>
+        // Theme switcher functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        // Available themes
+        const themes = [
+            { name: 'Matrix Green', class: '', icon: '💚' },
+            { name: 'Cyber Blue', class: 'theme-cyber-blue', icon: '💙' },
+            { name: 'Purple Haze', class: 'theme-purple', icon: '💜' },
+            { name: 'Fire Orange', class: 'theme-orange', icon: '🧡' },
+            { name: 'Pink Neon', class: 'theme-pink', icon: '💗' },
+            { name: 'Teal Wave', class: 'theme-teal', icon: '💚' }
+        ];
+
+        let currentThemeIndex = 0;
+
+        // Load theme from localStorage
+        const savedTheme = localStorage.getItem('neonbin-theme');
+        if (savedTheme) {
+            const themeIndex = themes.findIndex(t => t.class === savedTheme);
+            if (themeIndex !== -1) {
+                currentThemeIndex = themeIndex;
+                if (savedTheme) {
+                    body.className = savedTheme;
+                }
+            }
+        }
+
+        // Update button text
+        function updateButtonText() {
+            const theme = themes[currentThemeIndex];
+            document.getElementById('themeIcon').textContent = theme.icon;
+            document.getElementById('themeText').textContent = theme.name;
+        }
+
+        updateButtonText();
+
+        // Toggle to next theme
+        themeToggle.addEventListener('click', () => {
+            // Remove current theme class
+            body.className = '';
+            
+            // Move to next theme
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            const newTheme = themes[currentThemeIndex];
+            
+            // Apply new theme
+            if (newTheme.class) {
+                body.classList.add(newTheme.class);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('neonbin-theme', newTheme.class);
+            
+            // Update button
+            updateButtonText();
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>
