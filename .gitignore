@@ -1,6 +1,9 @@
 # Application data
 stored_codes/
 
+# Migration scripts (temporary)
+migrate_organized_files.py
+
 # Python cache
 __pycache__/
 *.pyc
