@@ -41,6 +41,29 @@
             <textarea name="code" id="code" required rows="20" placeholder="Paste your code here..."></textarea>
         </div>
 
+        <!-- Encryption Options -->
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="encrypt" id="encrypt" onchange="toggleEncryption('paste')">
+                🔒 Encrypt this file with password
+            </label>
+        </div>
+
+        <div class="form-group encryption-fields" id="pasteEncryptionFields" style="display: none;">
+            <label for="password">Encryption Password *</label>
+            <input type="password" name="password" id="password" placeholder="Enter encryption password">
+            <p class="help-text">⚠️ Remember this password! You'll need it to view the file later.</p>
+        </div>
+
+        <!-- Secret Folder Option -->
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="is_secret" id="is_secret">
+                🔐 Mark as secret (hidden from public view)
+            </label>
+            <p class="help-text">Secret files will only be visible in the "Secret Folders" section.</p>
+        </div>
+
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Upload Code</button>
             <a href="/" class="btn btn-secondary">Cancel</a>
@@ -68,6 +91,29 @@
         </div>
 
         <div id="filePreview" class="file-preview"></div>
+
+        <!-- Encryption Options -->
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="encrypt" id="encrypt_files" onchange="toggleEncryption('files')">
+                🔒 Encrypt files with password
+            </label>
+        </div>
+
+        <div class="form-group encryption-fields" id="filesEncryptionFields" style="display: none;">
+            <label for="password_files">Encryption Password *</label>
+            <input type="password" name="password" id="password_files" placeholder="Enter encryption password">
+            <p class="help-text">⚠️ Remember this password! You'll need it to view the files later.</p>
+        </div>
+
+        <!-- Secret Folder Option -->
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="is_secret" id="is_secret_files">
+                🔐 Mark as secret (hidden from public view)
+            </label>
+            <p class="help-text">Secret files will only be visible in the "Secret Folders" section.</p>
+        </div>
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Upload Files</button>
@@ -137,9 +183,55 @@
     color: #666;
     font-size: 14px;
 }
+
+.encryption-fields {
+    padding: 15px;
+    background: #f0f8ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.encryption-fields input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
 </style>
 
 <script>
+function toggleEncryption(formType) {
+    if (formType === 'paste') {
+        const checkbox = document.getElementById('encrypt');
+        const fields = document.getElementById('pasteEncryptionFields');
+        const passwordInput = document.getElementById('password');
+        
+        if (checkbox.checked) {
+            fields.style.display = 'block';
+            passwordInput.required = true;
+        } else {
+            fields.style.display = 'none';
+            passwordInput.required = false;
+            passwordInput.value = '';
+        }
+    } else if (formType === 'files') {
+        const checkbox = document.getElementById('encrypt_files');
+        const fields = document.getElementById('filesEncryptionFields');
+        const passwordInput = document.getElementById('password_files');
+        
+        if (checkbox.checked) {
+            fields.style.display = 'block';
+            passwordInput.required = true;
+        } else {
+            fields.style.display = 'none';
+            passwordInput.required = false;
+            passwordInput.value = '';
+        }
+    }
+}
+
 function switchTab(tab) {
     const pasteForm = document.getElementById('pasteForm');
     const filesForm = document.getElementById('filesForm');

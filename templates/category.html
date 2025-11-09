@@ -4,8 +4,15 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>{{ language|title }} Code Files</h1>
-    <a href="{{ url_for('upload_code') }}" class="btn btn-primary">Upload New Code</a>
+    <h1>{{ language|title }} Code Files {% if show_secret %}🔐 (Secret){% endif %}</h1>
+    <div>
+        {% if not show_secret %}
+        <a href="{{ url_for('category', language=language, show_secret='true') }}" class="btn btn-warning">🔐 View Secret Files</a>
+        {% else %}
+        <a href="{{ url_for('category', language=language) }}" class="btn btn-secondary">👁️ View Public Files</a>
+        {% endif %}
+        <a href="{{ url_for('upload_code') }}" class="btn btn-primary">Upload New Code</a>
+    </div>
 </div>
 
 {% if codes %}
@@ -13,7 +20,15 @@
     {% for code in codes %}
     <div class="code-item">
         <div class="code-item-header">
-            <h3>{{ code.title }}</h3>
+            <h3>
+                {{ code.title }}
+                {% if code.encrypted %}
+                <span class="badge encrypted-badge">🔒</span>
+                {% endif %}
+                {% if code.is_secret %}
+                <span class="badge secret-badge">🔐</span>
+                {% endif %}
+            </h3>
             <span class="code-date">{{ code.created_at[:10] }}</span>
         </div>
         {% if code.description %}
@@ -27,8 +42,40 @@
 </div>
 {% else %}
 <div class="empty-state">
-    <p>No {{ language }} code files yet.</p>
+    <p>No {{ 'secret' if show_secret else '' }} {{ language }} code files yet.</p>
     <a href="{{ url_for('upload_code') }}" class="btn btn-primary">Upload Your First Code</a>
 </div>
 {% endif %}
+
+<style>
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    margin-left: 8px;
+}
+
+.encrypted-badge {
+    background: #f0f8ff;
+    border: 1px solid #b3d9ff;
+}
+
+.secret-badge {
+    background: #fff0f5;
+    border: 1px solid #ffb3d9;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.page-header > div {
+    display: flex;
+    gap: 10px;
+}
+</style>
 {% endblock %}

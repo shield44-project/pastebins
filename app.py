@@ -16,37 +16,68 @@ import time
 import shutil
 from datetime import datetime
 from pathlib import Path
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 app.config['CODES_DIRECTORY'] = 'stored_codes'
-app.config['ENCRYPTED_DIRECTORY'] = 'encrypted'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
-# Load private key for decryption (if available)
-PRIVATE_KEY = None
-ENCRYPTION_SECRET = os.environ.get('TOKEN_SECRET', 'shield44')
+# Password-based encryption utilities
+def derive_key_from_password(password: str, salt: bytes) -> bytes:
+    """Derive encryption key from password using PBKDF2."""
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,  # 256 bits for AES-256
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    return kdf.derive(password.encode('utf-8'))
 
-def load_private_key():
-    """Load RSA private key from file if it exists."""
-    private_key_path = 'private_key.pem'
-    if os.path.exists(private_key_path):
-        try:
-            with open(private_key_path, 'rb') as f:
-                return serialization.load_pem_private_key(
-                    f.read(),
-                    password=None,
-                    backend=default_backend()
-                )
-        except Exception as e:
-            print(f"Warning: Could not load private key: {e}")
-    return None
+def encrypt_content_with_password(content: str, password: str) -> dict:
+    """
+    Encrypt content with password-based encryption.
+    Returns dict with salt, nonce, and ciphertext (all base64 encoded).
+    """
+    # Generate random salt and nonce
+    salt = os.urandom(16)  # 128 bits
+    nonce = os.urandom(12)  # 96 bits for AES-GCM
+    
+    # Derive key from password
+    key = derive_key_from_password(password, salt)
+    
+    # Encrypt content
+    cipher = AESGCM(key)
+    ciphertext = cipher.encrypt(nonce, content.encode('utf-8'), None)
+    
+    return {
+        'salt': base64.b64encode(salt).decode('utf-8'),
+        'nonce': base64.b64encode(nonce).decode('utf-8'),
+        'ciphertext': base64.b64encode(ciphertext).decode('utf-8')
+    }
 
-PRIVATE_KEY = load_private_key()
+def decrypt_content_with_password(encrypted_data: dict, password: str) -> str:
+    """
+    Decrypt content with password.
+    Returns decrypted string or raises exception on failure.
+    """
+    # Decode from base64
+    salt = base64.b64decode(encrypted_data['salt'])
+    nonce = base64.b64decode(encrypted_data['nonce'])
+    ciphertext = base64.b64decode(encrypted_data['ciphertext'])
+    
+    # Derive key from password
+    key = derive_key_from_password(password, salt)
+    
+    # Decrypt content
+    cipher = AESGCM(key)
+    plaintext = cipher.decrypt(nonce, ciphertext, None)
+    
+    return plaintext.decode('utf-8')
 
 def check_compiler_available(compiler):
     """Check if a compiler/interpreter is available in the system."""
@@ -135,86 +166,6 @@ def save_code_metadata(language, metadata):
     with open(metadata_path, 'w') as f:
         json.dump(metadata, f, indent=2)
 
-# Encryption/Decryption functions
-def load_encrypted_manifest():
-    """Load manifest of encrypted files."""
-    manifest_path = Path(app.config['ENCRYPTED_DIRECTORY']) / 'manifest.json'
-    if manifest_path.exists():
-        with open(manifest_path, 'r') as f:
-            return json.load(f)
-    return {}
-
-def decrypt_file_content(encrypted_data, private_key):
-    """
-    Decrypt file using hybrid RSA+AES scheme.
-    encrypted_data should have: encrypted_key, nonce, ciphertext (all base64).
-    Returns plaintext bytes.
-    """
-    # Decode from base64
-    encrypted_key = base64.b64decode(encrypted_data['encrypted_key'])
-    nonce = base64.b64decode(encrypted_data['nonce'])
-    ciphertext = base64.b64decode(encrypted_data['ciphertext'])
-    
-    # Decrypt AES key with RSA private key
-    aes_key = private_key.decrypt(
-        encrypted_key,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    
-    # Decrypt file content with AES-GCM
-    cipher = AESGCM(aes_key)
-    plaintext = cipher.decrypt(nonce, ciphertext, None)
-    
-    return plaintext
-
-def generate_token(filename, ttl=3600):
-    """Generate HMAC token for file access."""
-    expiry = int(time.time()) + ttl
-    message = f"{filename}:{expiry}"
-    signature = hmac.new(
-        ENCRYPTION_SECRET.encode('utf-8'),
-        message.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest()
-    token_data = f"{message}:{signature}"
-    return base64.urlsafe_b64encode(token_data.encode('utf-8')).decode('utf-8')
-
-def verify_token(token, filename):
-    """Verify HMAC token and check expiry."""
-    try:
-        token_data = base64.urlsafe_b64decode(token).decode('utf-8')
-        parts = token_data.rsplit(':', 1)
-        if len(parts) != 2:
-            return False
-        
-        message, signature = parts
-        msg_parts = message.split(':', 1)
-        if len(msg_parts) != 2:
-            return False
-        
-        token_filename, expiry_str = msg_parts
-        
-        if token_filename != filename:
-            return False
-        
-        expiry = int(expiry_str)
-        if time.time() > expiry:
-            return False
-        
-        expected_sig = hmac.new(
-            ENCRYPTION_SECRET.encode('utf-8'),
-            message.encode('utf-8'),
-            hashlib.sha256
-        ).hexdigest()
-        
-        return hmac.compare_digest(signature, expected_sig)
-    except Exception:
-        return False
-
 @app.route('/')
 def index():
     """Home page showing all language categories"""
@@ -235,13 +186,18 @@ def all_files():
         language_counts[lang] = len(metadata)
         
         for idx, code_info in enumerate(metadata):
+            # Skip secret files in all files view
+            if code_info.get('is_secret', False):
+                continue
+                
             file_entry = {
                 'id': idx,
                 'language': lang,
                 'title': code_info['title'],
                 'description': code_info.get('description', ''),
                 'filename': code_info['filename'],
-                'created_at': code_info['created_at']
+                'created_at': code_info['created_at'],
+                'encrypted': code_info.get('encrypted', False)
             }
             all_files_list.append(file_entry)
     
@@ -255,14 +211,64 @@ def all_files():
                          total_files=total_files,
                          language_counts=language_counts)
 
+@app.route('/secret-folders')
+def secret_folders():
+    """Show all secret files from all languages"""
+    secret_files_list = []
+    language_counts = {}
+    
+    for lang in LANGUAGES:
+        metadata = load_code_metadata(lang)
+        secret_count = 0
+        
+        for idx, code_info in enumerate(metadata):
+            # Only show secret files
+            if not code_info.get('is_secret', False):
+                continue
+            
+            secret_count += 1
+            file_entry = {
+                'id': idx,
+                'language': lang,
+                'title': code_info['title'],
+                'description': code_info.get('description', ''),
+                'filename': code_info['filename'],
+                'created_at': code_info['created_at'],
+                'encrypted': code_info.get('encrypted', False)
+            }
+            secret_files_list.append(file_entry)
+        
+        if secret_count > 0:
+            language_counts[lang] = secret_count
+    
+    # Sort by creation date (newest first)
+    secret_files_list.sort(key=lambda x: x['created_at'], reverse=True)
+    
+    total_files = len(secret_files_list)
+    
+    return render_template('secret_folders.html', 
+                         secret_files=secret_files_list,
+                         total_files=total_files,
+                         language_counts=language_counts)
+
 @app.route('/category/<language>')
 def category(language):
     """Show all codes for a specific language"""
     if language not in LANGUAGES:
         return "Invalid language", 404
     
+    show_secret = request.args.get('show_secret', 'false').lower() == 'true'
+    
     metadata = load_code_metadata(language)
-    return render_template('category.html', language=language, codes=metadata)
+    
+    # Filter out secret files unless show_secret is True
+    if not show_secret:
+        metadata = [code for code in metadata if not code.get('is_secret', False)]
+    else:
+        # Only show secret files when requested
+        metadata = [code for code in metadata if code.get('is_secret', False)]
+    
+    return render_template('category.html', language=language, codes=metadata, show_secret=show_secret)
 
 @app.route('/code/<language>/<int:code_id>')
 def view_code(language, code_id):
@@ -277,8 +283,16 @@ def view_code(language, code_id):
     code_info = metadata[code_id]
     code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
     
-    with open(code_path, 'r') as f:
-        code_content = f.read()
+    # Check if file is encrypted
+    is_encrypted = code_info.get('encrypted', False)
+    
+    if is_encrypted:
+        # For encrypted files, show a password prompt instead of content
+        code_content = None
+    else:
+        # Read normal file content
+        with open(code_path, 'r') as f:
+            code_content = f.read()
     
     # Check language type
     lang_config = LANGUAGES[language]
@@ -305,6 +319,41 @@ def view_code(language, code_id):
                          code_info=code_info, 
                          code_content=code_content)
 
+@app.route('/decrypt/<language>/<int:code_id>', methods=['POST'])
+def decrypt_code(language, code_id):
+    """Decrypt an encrypted code file"""
+    if language not in LANGUAGES:
+        return jsonify({'error': 'Invalid language'}), 404
+    
+    metadata = load_code_metadata(language)
+    if code_id >= len(metadata):
+        return jsonify({'error': 'Code not found'}), 404
+    
+    code_info = metadata[code_id]
+    
+    if not code_info.get('encrypted', False):
+        return jsonify({'error': 'This file is not encrypted'}), 400
+    
+    password = request.json.get('password') if request.is_json else request.form.get('password')
+    
+    if not password:
+        return jsonify({'error': 'Password is required'}), 400
+    
+    # Load encrypted file
+    enc_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'] + '.enc')
+    
+    try:
+        with open(enc_path, 'r') as f:
+            encrypted_data = json.load(f)
+        
+        # Decrypt content
+        code_content = decrypt_content_with_password(encrypted_data, password)
+        
+        return jsonify({'success': True, 'content': code_content})
+    
+    except Exception as e:
+        return jsonify({'error': 'Decryption failed. Wrong password or corrupted file.'}), 403
+
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_code():
     """Upload a new code file"""
@@ -313,12 +362,18 @@ def upload_code():
         title = request.form.get('title')
         description = request.form.get('description', '')
         code_content = request.form.get('code')
+        encrypt = request.form.get('encrypt') == 'on'
+        password = request.form.get('password', '')
+        is_secret = request.form.get('is_secret') == 'on'
         
         if not language or language not in LANGUAGES:
             return jsonify({'error': 'Invalid language'}), 400
         
         if not title or not code_content:
             return jsonify({'error': 'Title and code are required'}), 400
+        
+        if encrypt and not password:
+            return jsonify({'error': 'Password is required for encryption'}), 400
         
         # Validate title to prevent path traversal
         if '/' in title or '\\' in title or title.startswith('.'):
@@ -338,16 +393,26 @@ def upload_code():
         filename = f"{safe_title}{LANGUAGES[language]['extension']}"
         filepath = os.path.join(lang_dir, filename)
         
-        # Save the code file
-        with open(filepath, 'w') as f:
-            f.write(code_content)
+        # Handle encryption if requested
+        encrypted_data = None
+        if encrypt:
+            encrypted_data = encrypt_content_with_password(code_content, password)
+            # Save encrypted data to file
+            with open(filepath + '.enc', 'w') as f:
+                json.dump(encrypted_data, f)
+        else:
+            # Save the code file normally
+            with open(filepath, 'w') as f:
+                f.write(code_content)
         
         # Add to metadata
         code_info = {
             'title': title,
             'description': description,
             'filename': filename,
-            'created_at': datetime.now().isoformat()
+            'created_at': datetime.now().isoformat(),
+            'encrypted': encrypt,
+            'is_secret': is_secret
         }
         metadata.append(code_info)
         save_code_metadata(language, metadata)
@@ -364,12 +429,18 @@ def upload_files():
     
     files = request.files.getlist('files')
     language = request.form.get('language')
+    encrypt = request.form.get('encrypt') == 'on'
+    password = request.form.get('password', '')
+    is_secret = request.form.get('is_secret') == 'on'
     
     if not language or language not in LANGUAGES:
         return jsonify({'error': 'Invalid language'}), 400
     
     if not files or all(f.filename == '' for f in files):
         return jsonify({'error': 'No files selected'}), 400
+    
+    if encrypt and not password:
+        return jsonify({'error': 'Password is required for encryption'}), 400
     
     # Create language directory if it doesn't exist
     lang_dir = os.path.join(app.config['CODES_DIRECTORY'], language)
@@ -392,9 +463,19 @@ def upload_files():
             if not filename.endswith(expected_ext):
                 continue  # Skip files with wrong extension
             
-            # Save the file
             filepath = os.path.join(lang_dir, filename)
-            file.save(filepath)
+            
+            # Handle encryption if requested
+            if encrypt:
+                # Read file content
+                content = file.read().decode('utf-8')
+                encrypted_data = encrypt_content_with_password(content, password)
+                # Save encrypted data
+                with open(filepath + '.enc', 'w') as f:
+                    json.dump(encrypted_data, f)
+            else:
+                # Save the file normally
+                file.save(filepath)
             
             # Add to metadata
             title = filename.rsplit('.', 1)[0].replace('_', ' ').title()
@@ -402,7 +483,9 @@ def upload_files():
                 'title': title,
                 'description': f'Uploaded from file: {filename}',
                 'filename': filename,
-                'created_at': datetime.now().isoformat()
+                'created_at': datetime.now().isoformat(),
+                'encrypted': encrypt,
+                'is_secret': is_secret
             }
             metadata.append(code_info)
             uploaded_count += 1
@@ -590,96 +673,6 @@ def execute_code_file(language, code_path, stdin_input=''):
             return "Error: Execution timed out (5 seconds limit)"
         except Exception as e:
             return f"Error: {str(e)}"
-
-# Encrypted Files Routes
-@app.route('/encrypted-viewer')
-def encrypted_viewer():
-    """Serve the encrypted files viewer page using template."""
-    return render_template('encrypted_viewer.html')
-
-@app.route('/encrypted/manifest')
-def encrypted_manifest():
-    """Serve encrypted files manifest."""
-    manifest = load_encrypted_manifest()
-    return jsonify(manifest)
-
-@app.route('/encrypted/file')
-def serve_encrypted_file():
-    """
-    Serve decrypted file if valid token provided.
-    Query params: name=<filename>, token=<token>
-    """
-    if not PRIVATE_KEY:
-        return jsonify({'error': 'Decryption not available (private key not found)'}), 503
-    
-    filename = request.args.get('name')
-    token = request.args.get('token')
-    
-    if not filename or not token:
-        return jsonify({'error': 'Missing name or token parameter'}), 400
-    
-    # Verify token
-    if not verify_token(token, filename):
-        return jsonify({'error': 'Invalid or expired token'}), 403
-    
-    # Validate filename to prevent path traversal
-    if '/' in filename or '\\' in filename or filename.startswith('.'):
-        return jsonify({'error': 'Invalid filename'}), 400
-    
-    # Load encrypted file
-    enc_filename = f"{filename}.enc.json"
-    enc_path = Path(app.config['ENCRYPTED_DIRECTORY']) / enc_filename
-    
-    # Verify the path is within the encrypted directory (prevent path traversal)
-    try:
-        enc_path = enc_path.resolve()
-        encrypted_dir = Path(app.config['ENCRYPTED_DIRECTORY']).resolve()
-        if not str(enc_path).startswith(str(encrypted_dir)):
-            return jsonify({'error': 'Invalid file path'}), 400
-    except Exception:
-        return jsonify({'error': 'Invalid file path'}), 400
-    
-    if not enc_path.exists():
-        return jsonify({'error': 'File not found'}), 404
-    
-    try:
-        with open(enc_path, 'r') as f:
-            encrypted_data = json.load(f)
-        
-        # Decrypt file
-        plaintext = decrypt_file_content(
-            encrypted_data['payload'],
-            PRIVATE_KEY
-        )
-        
-        # Return plaintext
-        return plaintext, 200, {'Content-Type': 'text/plain; charset=utf-8'}
-    
-    except Exception as e:
-        print(f"Decryption error: {e}")
-        return jsonify({'error': 'Decryption failed'}), 500
-
-@app.route('/encrypted/token/<filename>')
-def get_file_token(filename):
-    """Generate a token for accessing an encrypted file."""
-    # In production, add authentication here
-    ttl = int(request.args.get('ttl', 3600))
-    token = generate_token(filename, ttl)
-    return jsonify({'token': token, 'filename': filename, 'expires_in': ttl})
-
-@app.route('/encrypted/list')
-def list_encrypted_files():
-    """List all encrypted files with their tokens."""
-    manifest = load_encrypted_manifest()
-    files = []
-    for orig_name in manifest.keys():
-        token = generate_token(orig_name, 3600)  # 1 hour token
-        files.append({
-            'name': orig_name,
-            'token': token,
-            'view_url': f"/encrypted/file?name={orig_name}&token={token}"
-        })
-    return jsonify({'files': files})
 
 @app.route('/api/folders', methods=['GET'])
 def list_folders():

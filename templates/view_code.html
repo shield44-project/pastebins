@@ -13,6 +13,12 @@
         <div>
             <h1>{{ code_info.title }}</h1>
             <p class="code-meta">{{ language|title }} • Created: {{ code_info.created_at[:10] }}</p>
+            {% if code_info.encrypted %}
+            <p class="code-meta encrypted-badge">🔒 Encrypted File</p>
+            {% endif %}
+            {% if code_info.is_secret %}
+            <p class="code-meta secret-badge">🔐 Secret File</p>
+            {% endif %}
             {% if code_info.description %}
             <p class="code-description">{{ code_info.description }}</p>
             {% endif %}
@@ -20,10 +26,25 @@
         <a href="{{ url_for('category', language=language) }}" class="btn btn-secondary">Back to {{ language|title }}</a>
     </div>
 
+    {% if code_info.encrypted and not code_content %}
+    <!-- Password prompt for encrypted files -->
+    <div class="encryption-prompt">
+        <h2>🔒 This file is encrypted</h2>
+        <p>Please enter the password to view the content:</p>
+        <div class="password-form">
+            <input type="password" id="decrypt-password" placeholder="Enter password">
+            <button id="decrypt-btn" class="btn btn-primary">Decrypt</button>
+        </div>
+        <div id="decrypt-error" class="error-message" style="display: none;"></div>
+    </div>
+    
+    <div id="decrypted-content" style="display: none;">
+    {% endif %}
+    
     <div class="code-content">
         <h2>Code</h2>
         <div class="code-editor-wrapper">
-            <textarea id="code-editor">{{ code_content }}</textarea>
+            <textarea id="code-editor">{{ code_content if code_content else '' }}</textarea>
         </div>
     </div>
 
@@ -45,7 +66,58 @@
             </div>
         </div>
     </div>
+    
+    {% if code_info.encrypted and not code_content %}
+    </div>
+    {% endif %}
 </div>
+
+<style>
+.encrypted-badge, .secret-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    background: #f0f8ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+.secret-badge {
+    background: #fff0f5;
+    border-color: #ffb3d9;
+}
+
+.encryption-prompt {
+    background: #f8f9fa;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    padding: 30px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.password-form {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.password-form input {
+    padding: 10px;
+    width: 300px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.error-message {
+    color: #dc3545;
+    margin-top: 15px;
+    font-weight: bold;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -64,13 +136,86 @@
         'typescript': 'text/typescript'
     };
 
-    const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
-        mode: languageModes['{{ language }}'],
-        theme: 'monokai',
-        lineNumbers: true,
-        readOnly: true,
-        viewportMargin: Infinity
-    });
+    let editor;
+    const isEncrypted = {{ 'true' if code_info.encrypted and not code_content else 'false' }};
+    
+    if (!isEncrypted) {
+        editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+            mode: languageModes['{{ language }}'],
+            theme: 'monokai',
+            lineNumbers: true,
+            readOnly: true,
+            viewportMargin: Infinity
+        });
+    }
+
+    // Handle decryption for encrypted files
+    if (isEncrypted) {
+        const decryptBtn = document.getElementById('decrypt-btn');
+        const passwordInput = document.getElementById('decrypt-password');
+        const errorDiv = document.getElementById('decrypt-error');
+        const decryptedContent = document.getElementById('decrypted-content');
+        
+        async function decryptFile() {
+            const password = passwordInput.value;
+            
+            if (!password) {
+                errorDiv.textContent = 'Please enter a password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            decryptBtn.disabled = true;
+            decryptBtn.textContent = '🔓 Decrypting...';
+            errorDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('{{ url_for("decrypt_code", language=language, code_id=code_id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show decrypted content
+                    document.querySelector('.encryption-prompt').style.display = 'none';
+                    decryptedContent.style.display = 'block';
+                    
+                    // Initialize CodeMirror with decrypted content
+                    const textarea = document.getElementById('code-editor');
+                    textarea.value = data.content;
+                    
+                    editor = CodeMirror.fromTextArea(textarea, {
+                        mode: languageModes['{{ language }}'],
+                        theme: 'monokai',
+                        lineNumbers: true,
+                        readOnly: true,
+                        viewportMargin: Infinity
+                    });
+                } else {
+                    errorDiv.textContent = data.error || 'Decryption failed';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                decryptBtn.disabled = false;
+                decryptBtn.textContent = 'Decrypt';
+            }
+        }
+        
+        decryptBtn.addEventListener('click', decryptFile);
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                decryptFile();
+            }
+        });
+    }
 
     // Execute code
     document.getElementById('run-code').addEventListener('click', async function() {
