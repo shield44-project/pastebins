@@ -2,66 +2,6 @@
 
 {% block title %}NeonBin - Code Storage Platform{% endblock %}
 
-{% block extra_css %}
-<style>
-    /* Enhanced icon styling with cool effects */
-    .category-icon {
-        font-size: 4em;
-        margin-bottom: 20px;
-        display: block;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-        transition: all 0.3s var(--transition);
-    }
-    
-    .category-card:hover .category-icon {
-        transform: scale(1.15) rotate(5deg);
-        filter: drop-shadow(0 4px 8px var(--accent-primary));
-    }
-    
-    /* Professional styled icons for C and C++ */
-    .icon-c, .icon-cpp {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2.5em;
-        font-weight: bold;
-        font-family: 'Google Sans', monospace;
-        border-radius: 12px;
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
-        color: #ffffff;
-        box-shadow: 0 4px 12px var(--card-shadow);
-        transition: all 0.3s var(--transition);
-    }
-    
-    .category-card:hover .icon-c,
-    .category-card:hover .icon-cpp {
-        transform: scale(1.15) rotate(5deg);
-        box-shadow: 0 8px 24px var(--accent-primary);
-    }
-    
-    .icon-c {
-        background: linear-gradient(135deg, #00599C, #0080CC);
-    }
-    
-    .icon-cpp {
-        background: linear-gradient(135deg, #00599C, #004482);
-        position: relative;
-    }
-    
-    .icon-cpp::after {
-        content: '++';
-        position: absolute;
-        font-size: 0.6em;
-        right: 8px;
-        bottom: 8px;
-        opacity: 0.9;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="info-section fade-in">
     <h2 class="info-title">✨ Welcome to NeonBin</h2>
@@ -95,19 +35,15 @@
 <div class="categories-grid">
     {% for lang_key, lang_config in languages.items() %}
     <div class="category-card" onclick="window.location.href='{{ url_for('category', language=lang_key) }}'">
-        {% if lang_key == 'c' %}
-            <div class="icon-c">C</div>
-        {% elif lang_key == 'cpp' %}
-            <div class="icon-cpp">C</div>
-        {% else %}
-            <span class="category-icon">
-                {% if lang_key == 'python' %}🐍
-                {% elif lang_key == 'java' %}☕
-                {% elif lang_key == 'html' %}🌐
-                {% else %}📄
-                {% endif %}
-            </span>
-        {% endif %}
+        <span class="category-icon">
+            {% if lang_key == 'python' %}🐍
+            {% elif lang_key == 'java' %}☕
+            {% elif lang_key == 'c' %}©️
+            {% elif lang_key == 'cpp' %}⚙️
+            {% elif lang_key == 'html' %}🌐
+            {% else %}📄
+            {% endif %}
+        </span>
         <div class="category-name">{{ lang_key }}</div>
         <div class="category-count">{{ categories.get(lang_key, 0) }} files</div>
         <button class="category-btn">View Files</button>
