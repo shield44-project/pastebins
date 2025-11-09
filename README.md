@@ -238,6 +238,8 @@ codes_storer_website/
     └── *_metadata.json   # Metadata files
 ```
 
+**Note**: The `templates/` folder contains only Flask HTML templates (Jinja2). Sample code files and executables have been organized in the `sample_codes/` directory for better separation of concerns.
+
 ## Security Features
 
 ### Code Execution Security
