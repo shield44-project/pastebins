@@ -1,95 +1,24 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        p{
+            background-color: red;
+            color:white;
+            height:2124px;
+            text-transform: capitalize;
+            line-height: 48px;
+            font-size:24px;
+            font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 
-{% block title %}Home - Code Storage{% endblock %}
-
-{% block content %}
-<div class="hero">
-    <h1>✨ Welcome to Code Storage ✨</h1>
-    <p>Store, view, categorize and execute your code files in Python, Java, C, C++, and HTML</p>
-    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem;">
-        <a href="{{ url_for('upload_code') }}" class="btn btn-primary">📤 Upload New Code</a>
-        <a href="{{ url_for('encrypted_viewer') }}" class="btn btn-secondary">🔐 View Encrypted Files</a>
-    </div>
-</div>
-
-<div class="categories">
-    <h2>📚 Code Categories</h2>
-    <div class="category-grid">
-        <div class="category-card">
-            <div class="category-icon python-icon">🐍</div>
-            <h3>Python</h3>
-            <p>{{ categories.get('python', 0) }} files</p>
-            <a href="{{ url_for('category', language='python') }}" class="btn btn-secondary">View Python Codes</a>
-        </div>
-
-        <div class="category-card">
-            <div class="category-icon java-icon">☕</div>
-            <h3>Java</h3>
-            <p>{{ categories.get('java', 0) }} files</p>
-            <a href="{{ url_for('category', language='java') }}" class="btn btn-secondary">View Java Codes</a>
-        </div>
-
-        <div class="category-card">
-            <div class="category-icon c-icon">©️</div>
-            <h3>C</h3>
-            <p>{{ categories.get('c', 0) }} files</p>
-            <a href="{{ url_for('category', language='c') }}" class="btn btn-secondary">View C Codes</a>
-        </div>
-
-        <div class="category-card">
-            <div class="category-icon cpp-icon">⚙️</div>
-            <h3>C++</h3>
-            <p>{{ categories.get('cpp', 0) }} files</p>
-            <a href="{{ url_for('category', language='cpp') }}" class="btn btn-secondary">View C++ Codes</a>
-        </div>
-
-        <div class="category-card">
-            <div class="category-icon html-icon">🌐</div>
-            <h3>HTML</h3>
-            <p>{{ categories.get('html', 0) }} files</p>
-            <a href="{{ url_for('category', language='html') }}" class="btn btn-secondary">View HTML Websites</a>
-        </div>
-    </div>
-</div>
-
-<div class="features">
-    <h2>🚀 Features</h2>
-    <div class="feature-grid">
-        <div class="feature-item">
-            <h3>📁 Store Code</h3>
-            <p>Upload and organize your code files by language</p>
-        </div>
-        <div class="feature-item">
-            <h3>👁️ View Code</h3>
-            <p>Browse and view your stored code with syntax highlighting</p>
-        </div>
-        <div class="feature-item">
-            <h3>▶️ Execute Code</h3>
-            <p>Run your code and see the output directly in the browser</p>
-        </div>
-        <div class="feature-item">
-            <h3>🗂️ Categorize</h3>
-            <p>Automatically organize by language (Python, Java, C, C++, HTML)</p>
-        </div>
-        <div class="feature-item">
-            <h3>🌐 Run Websites</h3>
-            <p>Upload HTML files and view them running inside the website</p>
-        </div>
-        <div class="feature-item">
-            <h3>🔐 Secure Encryption</h3>
-            <p>View encrypted Python code examples with token-based authentication</p>
-        </div>
-    </div>
-</div>
-
-<!-- Encrypted Files Info Section -->
-<div class="features" style="margin-top: 2rem;">
-    <h2>🔐 Encrypted File Viewer</h2>
-    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem;">
-        Access encrypted Python code examples with automatic token generation. No manual token entry required!
-    </p>
-    <div style="text-align: center;">
-        <a href="{{ url_for('encrypted_viewer') }}" class="btn btn-primary">🔓 Access Encrypted Files</a>
-    </div>
-</div>
-{% endblock %}
+          
+        }
+    </style>
+</head>
+<body>
+    <p class="1">Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia quaerat ullam natus perferendis similique aliquam voluptatum culpa maxime repellendus? Esse rem illum iure aliquam recusandae eveniet aperiam? Exercitationem minima dolorum cum itaque neque dolores soluta deserunt, perferendis doloribus adipisci obcaecati aut fugit quidem nobis qui dolor! Laudantium hic veniam dolor provident dolorum architecto sint sed fuga, itaque, consequuntur voluptas ipsum possimus iste esse recusandae! Quae, fugit aperiam ipsum, atque in tempora dicta, eius libero neque omnis incidunt amet est qui minima. Eius molestiae quis unde quia corrupti ut a magnam voluptates assumenda harum necessitatibus, vitae quaerat deserunt possimus omnis hic id laudantium quam reiciendis corporis autem? Dolorem eos eius, possimus ut, sed repudiandae facere est consequuntur a quo esse temporibus! Placeat natus facere hic blanditiis totam ipsa at commodi qui iure ea inventore molestiae veniam rerum, maxime architecto quibusdam voluptates. Nam velit hic modi quae nesciunt, libero perspiciatis delectus fugiat iste autem harum ducimus. Quis nihil repudiandae provident qui culpa, laborum, at asperiores iste soluta iusto non? Nesciunt eos in ducimus sapiente distinctio vero eaque neque molestias odio non. Ipsam libero maiores laboriosam eius, pariatur enim obcaecati cum. Quae, alias dolor praesentium distinctio numquam iste, porro, id eius laudantium voluptatem non dolorum omnis earum velit nostrum rerum facilis aperiam. Dolores modi unde eum quibusdam, id ad corrupti dolorum, ratione voluptatibus excepturi vitae animi quos placeat ea porro delectus! Facere, earum perspiciatis ea esse tempora nostrum cupiditate. Illum, molestiae. Nostrum dolorum, magni perferendis aliquam sint porro sunt. Labore veritatis repudiandae sint quia fuga, tempora, molestiae similique modi corrupti exercitationem mollitia eaque et quas in earum illum. Unde iste dolore magni deleniti quasi nihil ea illo perspiciatis reprehenderit laboriosam consequatur quia quam at officia debitis eius minima quidem consectetur eligendi non, animi fuga repudiandae. Voluptatem voluptatum unde, soluta, eveniet fuga repudiandae quae deleniti eum aspernatur minima architecto sint enim fugiat illum hic a explicabo voluptas doloribus esse iure nobis ut. Labore autem qui fuga maxime eaque, dolorem, eveniet soluta esse repellat neque debitis eius harum ipsum possimus, excepturi ut deleniti itaque voluptate suscipit laudantium sapiente quas. At.</p>
+</body>
+</html>
