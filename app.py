@@ -225,23 +225,38 @@ def get_code_file_path(language, filename):
     Get the actual path to a code file, checking both writable and read-only directories.
     Returns the first existing file path, or the writable path if neither exists.
     """
-    # Validate language to prevent path injection
+    # SECURITY: Validate language to prevent path injection
+    # Language parameter is validated against LANGUAGES whitelist
     if language not in LANGUAGES:
         raise ValueError(f"Invalid language: {language}")
     
-    # Validate filename to prevent path traversal attacks
+    # SECURITY: Validate filename to prevent path traversal attacks
     # Filename should not contain path separators or start with dots
     if not filename or '/' in filename or '\\' in filename or filename.startswith('.'):
         raise ValueError(f"Invalid filename: {filename}")
     
     # Check writable directory first (for uploaded files)
-    writable_path = os.path.join(app.config['CODES_DIRECTORY'], language, filename)
+    # Safe: language is whitelisted, filename is validated above
+    base_writable = os.path.join(app.config['CODES_DIRECTORY'], language)
+    writable_path = os.path.normpath(os.path.join(base_writable, filename))
+    
+    # Verify path stays within expected directory (defense in depth)
+    if not writable_path.startswith(os.path.abspath(base_writable)):
+        raise ValueError("Path traversal detected")
+    
     if os.path.exists(writable_path):
         return writable_path
     
     # On Vercel, check read-only directory (for pre-deployed files)
     if app.config.get('READONLY_CODES_DIRECTORY'):
-        readonly_path = os.path.join(app.config['READONLY_CODES_DIRECTORY'], language, filename)
+        # Safe: language is whitelisted, filename is validated above
+        base_readonly = os.path.join(app.config['READONLY_CODES_DIRECTORY'], language)
+        readonly_path = os.path.normpath(os.path.join(base_readonly, filename))
+        
+        # Verify path stays within expected directory (defense in depth)
+        if not readonly_path.startswith(os.path.abspath(base_readonly)):
+            raise ValueError("Path traversal detected")
+        
         if os.path.exists(readonly_path):
             return readonly_path
     
