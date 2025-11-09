@@ -46,6 +46,15 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 - File preview before upload
 - Drag-and-drop support (coming soon)
 
+### 📝 Notes with Screenshots
+- **Create and store notes with rich text content**
+- **Attach multiple screenshots/images to notes**
+- Drag-and-drop image upload support
+- Image gallery with thumbnail previews
+- Edit and delete notes
+- Stored locally in browser (localStorage) for static deployment
+- Perfect for documentation, reminders, and visual references
+
 ## Supported Languages
 
 | Language | Extension | Execution Support | Compilation |
