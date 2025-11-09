@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Define source and destination directories
-SOURCE_DIR = 'templates/organized'
+SOURCE_DIR = 'templates/code_samples'
 DEST_DIR = 'stored_codes'
 
 # Language mappings
@@ -69,7 +69,7 @@ def migrate_language_files(language, extension):
         
         metadata_entry = {
             'title': title,
-            'description': f'Migrated from templates/organized/{language}/{filename}',
+            'description': f'Migrated from templates/code_samples/{language}/{filename}',
             'filename': filename,
             'created_at': created_at
         }

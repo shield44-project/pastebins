@@ -1,0 +1,38 @@
+[
+  {
+    "title": "Struct",
+    "description": "Migrated from templates/code_samples/cpp/struct.cpp",
+    "filename": "struct.cpp",
+    "created_at": "2025-11-09T13:25:08.354785"
+  },
+  {
+    "title": "Templatebyref",
+    "description": "Migrated from templates/code_samples/cpp/templatebyref.cpp",
+    "filename": "templatebyref.cpp",
+    "created_at": "2025-11-09T13:25:08.354785"
+  },
+  {
+    "title": "Templatefn",
+    "description": "Migrated from templates/code_samples/cpp/templatefn.cpp",
+    "filename": "templatefn.cpp",
+    "created_at": "2025-11-09T13:25:08.354785"
+  },
+  {
+    "title": "Templatespecialization",
+    "description": "Migrated from templates/code_samples/cpp/templatespecialization.cpp",
+    "filename": "templatespecialization.cpp",
+    "created_at": "2025-11-09T13:25:08.354785"
+  },
+  {
+    "title": "Thisptr",
+    "description": "Migrated from templates/code_samples/cpp/thisptr.cpp",
+    "filename": "thisptr.cpp",
+    "created_at": "2025-11-09T13:25:08.354785"
+  },
+  {
+    "title": "Weirdintegraltypes",
+    "description": "Migrated from templates/code_samples/cpp/weirdintegraltypes.cpp",
+    "filename": "weirdintegraltypes.cpp",
+    "created_at": "2025-11-09T13:25:08.354785"
+  }
+]

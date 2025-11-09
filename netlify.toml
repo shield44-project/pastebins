@@ -1,5 +1,6 @@
 [build]
-  # No build command needed for static site
+  # Build command to generate static data from stored_codes
+  command = "python3 generate_static_data.py"
   publish = "."
   
 [build.environment]
