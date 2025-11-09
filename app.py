@@ -30,7 +30,20 @@ app = Flask(__name__,
             static_folder=os.path.join(BASE_DIR, 'static'),
             template_folder=os.path.join(BASE_DIR, 'templates'))
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
-app.config['CODES_DIRECTORY'] = 'stored_codes'
+
+# Detect if running on Vercel (or other serverless with read-only filesystem)
+IS_VERCEL = os.environ.get('VERCEL') == '1' or os.environ.get('VERCEL_ENV') is not None
+
+if IS_VERCEL:
+    # On Vercel: Use /tmp for uploads (writable but ephemeral)
+    # Also keep reference to read-only directory for pre-deployed files
+    app.config['CODES_DIRECTORY'] = '/tmp/stored_codes'
+    app.config['READONLY_CODES_DIRECTORY'] = os.path.join(BASE_DIR, 'stored_codes')
+else:
+    # Use local directory for development/traditional hosting
+    app.config['CODES_DIRECTORY'] = os.path.join(BASE_DIR, 'stored_codes')
+    app.config['READONLY_CODES_DIRECTORY'] = None
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
 # Password-based encryption utilities
@@ -207,16 +220,56 @@ def get_code_metadata_path(language):
         raise ValueError(f"Invalid language: {language}")
     return os.path.join(app.config['CODES_DIRECTORY'], f'{language}_metadata.json')
 
+def get_code_file_path(language, filename):
+    """
+    Get the actual path to a code file, checking both writable and read-only directories.
+    Returns the first existing file path, or the writable path if neither exists.
+    """
+    # Validate language to prevent path injection
+    if language not in LANGUAGES:
+        raise ValueError(f"Invalid language: {language}")
+    
+    # Check writable directory first (for uploaded files)
+    writable_path = os.path.join(app.config['CODES_DIRECTORY'], language, filename)
+    if os.path.exists(writable_path):
+        return writable_path
+    
+    # On Vercel, check read-only directory (for pre-deployed files)
+    if app.config.get('READONLY_CODES_DIRECTORY'):
+        readonly_path = os.path.join(app.config['READONLY_CODES_DIRECTORY'], language, filename)
+        if os.path.exists(readonly_path):
+            return readonly_path
+    
+    # Return writable path as default (for new files)
+    return writable_path
+
 def load_code_metadata(language):
     """Load metadata for codes in a specific language"""
     # Validate language parameter
     if language not in LANGUAGES:
         return []
+    
+    all_metadata = []
+    
+    # Try to load from writable directory first (for uploaded files)
     metadata_path = get_code_metadata_path(language)
     if os.path.exists(metadata_path):
         with open(metadata_path, 'r') as f:
-            return json.load(f)
-    return []
+            all_metadata = json.load(f)
+    
+    # On Vercel, also load from read-only directory (for pre-deployed files)
+    if app.config.get('READONLY_CODES_DIRECTORY'):
+        readonly_path = os.path.join(app.config['READONLY_CODES_DIRECTORY'], f'{language}_metadata.json')
+        if os.path.exists(readonly_path):
+            with open(readonly_path, 'r') as f:
+                readonly_metadata = json.load(f)
+                # Merge with writable metadata, avoiding duplicates by filename
+                existing_filenames = {item['filename'] for item in all_metadata}
+                for item in readonly_metadata:
+                    if item['filename'] not in existing_filenames:
+                        all_metadata.append(item)
+    
+    return all_metadata
 
 def save_code_metadata(language, metadata):
     """Save metadata for codes in a specific language"""
@@ -342,7 +395,7 @@ def view_code(language, code_id):
         return "Code not found", 404
     
     code_info = metadata[code_id]
-    code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+    code_path = get_code_file_path(language, code_info['filename'])
     
     # Check if file is encrypted
     is_encrypted = code_info.get('encrypted', False)
@@ -401,7 +454,7 @@ def decrypt_code(language, code_id):
         return jsonify({'error': 'Password is required'}), 400
     
     # Load encrypted file
-    enc_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'] + '.enc')
+    enc_path = get_code_file_path(language, code_info['filename'] + '.enc')
     
     try:
         with open(enc_path, 'r') as f:
@@ -584,7 +637,7 @@ def render_html(language, code_id):
         return "Code not found", 404
     
     code_info = metadata[code_id]
-    code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+    code_path = get_code_file_path(language, code_info['filename'])
     
     with open(code_path, 'r') as f:
         html_content = f.read()
@@ -608,7 +661,7 @@ def execute_code(language, code_id):
         return jsonify({'error': 'Code not found'}), 404
     
     code_info = metadata[code_id]
-    code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+    code_path = get_code_file_path(language, code_info['filename'])
     
     # Get custom input if provided
     custom_input = request.json.get('input', '') if request.is_json else ''

@@ -298,5 +298,13 @@
     "description": "Migrated from templates/code_samples/python/swggame.py",
     "filename": "swggame.py",
     "created_at": "2025-11-09T13:25:08.356785"
+  },
+  {
+    "title": "Test Secret Upload",
+    "description": "Testing upload functionality on Vercel",
+    "filename": "Test_Secret_Upload.py",
+    "created_at": "2025-11-09T18:10:09.786469",
+    "encrypted": false,
+    "is_secret": true
   }
 ]
