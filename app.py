@@ -14,6 +14,8 @@ import hmac
 import hashlib
 import time
 import shutil
+import urllib.request
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -82,6 +84,76 @@ def decrypt_content_with_password(encrypted_data: dict, password: str) -> str:
 def check_compiler_available(compiler):
     """Check if a compiler/interpreter is available in the system."""
     return shutil.which(compiler) is not None
+
+def execute_c_code_online(code_content, stdin_input=''):
+    """
+    Execute C code using an online compiler API.
+    Uses the Wandbox API (https://wandbox.org/).
+    """
+    try:
+        # Prepare the request to Wandbox API
+        url = 'https://wandbox.org/api/compile.json'
+        
+        # Prepare the payload for Wandbox
+        payload = {
+            'compiler': 'gcc-head',
+            'code': code_content,
+            'stdin': stdin_input,
+            'options': '',
+            'compiler-option-raw': '-O2 -Wall',
+            'runtime-option-raw': '',
+            'save': False
+        }
+        
+        # Send the request
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers=headers,
+            method='POST'
+        )
+        
+        with urllib.request.urlopen(req, timeout=30) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            
+            # Extract output
+            output = ''
+            
+            # Check for compilation error
+            if 'compiler_error' in result and result['compiler_error']:
+                output = 'Compilation Error:\n' + result['compiler_error']
+                return output
+            
+            # Check for compilation message (warnings)
+            if 'compiler_message' in result and result['compiler_message']:
+                output += result['compiler_message'] + '\n'
+            
+            # Get program output
+            if 'program_output' in result and result['program_output']:
+                output += result['program_output']
+            
+            # Check for program error
+            if 'program_error' in result and result['program_error']:
+                output += '\nErrors:\n' + result['program_error']
+            
+            # Check for execution status
+            if 'status' in result and result['status'] != '0':
+                if not output.strip():
+                    output = f"Program exited with status {result['status']}"
+            
+            return output if output.strip() else 'Program executed successfully with no output.'
+            
+    except urllib.error.URLError as e:
+        # Fallback message with helpful instructions
+        return f"Error: Unable to connect to online compiler service.\nPlease ensure you have an internet connection or install gcc locally to compile C code.\nDetails: {str(e)}"
+    except urllib.error.HTTPError as e:
+        return f"Error: Online compiler service returned an error (HTTP {e.code}).\nPlease try again later or install gcc locally."
+    except Exception as e:
+        return f"Error: Failed to execute code online.\nDetails: {str(e)}"
 
 # Ensure the codes directory exists
 os.makedirs(app.config['CODES_DIRECTORY'], exist_ok=True)
@@ -571,7 +643,18 @@ def execute_code_file(language, code_path, stdin_input=''):
     if lang_config.get('type') == 'web' and language != 'javascript':
         return "Error: This language type is for web preview only"
     
-    # Check if compiler/interpreter is available
+    # Read code content first
+    with open(code_path, 'r') as f:
+        code_content = f.read()
+    
+    # For C language, use online compiler if gcc is not available
+    if language == 'c':
+        compiler = lang_config['compiler']
+        if not check_compiler_available(compiler):
+            # Use online compiler for C code
+            return execute_c_code_online(code_content, stdin_input)
+    
+    # Check if compiler/interpreter is available for other languages
     if lang_config.get('compile'):
         compiler = lang_config['compiler']
         if not check_compiler_available(compiler):
@@ -593,9 +676,6 @@ def execute_code_file(language, code_path, stdin_input=''):
             return "Error: Invalid filename"
         
         temp_file = os.path.join(tmpdir, filename)
-        
-        with open(code_path, 'r') as f:
-            code_content = f.read()
         
         with open(temp_file, 'w') as f:
             f.write(code_content)
