@@ -307,13 +307,5 @@
     "created_at": "2025-11-16T08:20:07.117517",
     "encrypted": false,
     "is_secret": false
-  },
-  {
-    "title": "Test Metadata",
-    "description": "Code file: test_metadata.py",
-    "filename": "test_metadata.py",
-    "created_at": "2025-11-16T10:44:08.805101",
-    "encrypted": false,
-    "is_secret": false
   }
 ]
