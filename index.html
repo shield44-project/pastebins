@@ -1563,34 +1563,64 @@ cd codes_storer_website</div>
         }
         
         function deleteCurrentFile() {
-            if (currentViewingFile && confirm('Are you sure you want to delete this file?')) {
-                deleteFile(currentViewingFile.id);
-                closeViewModal();
+            if (currentViewingFile) {
+                if (confirm('⚠️ Note: This is a local storage operation only.\n\nFor files stored in GitHub, please visit the repository to delete them.\n\nDelete this file from local storage?')) {
+                    deleteFile(currentViewingFile.id);
+                    closeViewModal();
+                }
             }
         }
         
         // Edit file function
         function editCurrentFile() {
             if (currentViewingFile) {
-                // Store reference before closing modal
-                const fileToEdit = currentViewingFile;
+                // Check if user wants to edit locally or on GitHub
+                const editChoice = confirm('✏️ Edit Options:\n\nClick OK to edit locally (modal)\nClick Cancel to be directed to edit on GitHub (recommended for synced files)');
                 
-                // Close view modal
-                closeViewModal();
-                
-                // Open upload modal with pre-filled data
-                document.getElementById('uploadModal').classList.add('active');
-                document.getElementById('language').value = fileToEdit.language;
-                document.getElementById('title').value = fileToEdit.title;
-                document.getElementById('description').value = fileToEdit.description || '';
-                document.getElementById('code').value = fileToEdit.code;
-                
-                // Switch to paste mode
-                switchUploadMethod('paste');
-                
-                // Store the current file ID for updating
-                document.getElementById('uploadForm').dataset.editingId = fileToEdit.id;
+                if (editChoice) {
+                    // Store reference before closing modal
+                    const fileToEdit = currentViewingFile;
+                    
+                    // Close view modal
+                    closeViewModal();
+                    
+                    // Open upload modal with pre-filled data
+                    document.getElementById('uploadModal').classList.add('active');
+                    document.getElementById('language').value = fileToEdit.language;
+                    document.getElementById('title').value = fileToEdit.title;
+                    document.getElementById('description').value = fileToEdit.description || '';
+                    document.getElementById('code').value = fileToEdit.code;
+                    
+                    // Switch to paste mode
+                    switchUploadMethod('paste');
+                    
+                    // Store the current file ID for updating
+                    document.getElementById('uploadForm').dataset.editingId = fileToEdit.id;
+                } else {
+                    // Redirect to GitHub (construct URL based on file info)
+                    const githubRepo = 'shield44-project/pastebins'; // Update this to your repo
+                    const githubBranch = 'main';
+                    const filename = currentViewingFile.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() + getExtensionForLanguage(currentViewingFile.language);
+                    const githubUrl = `https://github.com/${githubRepo}/edit/${githubBranch}/stored_codes/${currentViewingFile.language}/${filename}`;
+                    window.open(githubUrl, '_blank');
+                    showAlert('Opening GitHub editor in new tab...', 'success');
+                }
             }
+        }
+        
+        // Helper function to get file extension for language
+        function getExtensionForLanguage(language) {
+            const extensions = {
+                'python': '.py',
+                'java': '.java',
+                'c': '.c',
+                'cpp': '.cpp',
+                'javascript': '.js',
+                'typescript': '.ts',
+                'react': '.jsx',
+                'html': '.html'
+            };
+            return extensions[language] || '.txt';
         }
         
         // Display stored files
