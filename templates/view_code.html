@@ -140,15 +140,20 @@
 
 .analysis-section {
     margin-top: 30px;
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
+    background: #000000;
+    border: 1px solid #00ff00;
     border-radius: 8px;
     padding: 20px;
 }
 
+.analysis-section h3 {
+    color: #00ff00;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
 .analysis-display {
-    background: white;
-    border: 1px solid #dee2e6;
+    background: #0a0a0a;
+    border: 1px solid #00ff00;
     border-radius: 4px;
     padding: 15px;
     max-height: 600px;
@@ -156,54 +161,73 @@
     font-family: 'Courier New', monospace;
     font-size: 14px;
     white-space: pre-wrap;
+    color: #00ff00;
+}
+
+.analysis-display h4 {
+    color: #00ff00;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+    margin-top: 15px;
+    margin-bottom: 10px;
 }
 
 .analysis-display pre {
     margin: 0;
     white-space: pre-wrap;
     word-wrap: break-word;
+    color: #00ff00;
 }
 
 .analysis-summary {
-    background: #e7f3ff;
-    border-left: 4px solid #007bff;
+    background: rgba(0, 255, 0, 0.1);
+    border-left: 4px solid #00ff00;
     padding: 15px;
     margin-bottom: 20px;
     border-radius: 4px;
+    color: #00ff00;
+}
+
+.analysis-summary strong {
+    color: #00ff00;
 }
 
 .analysis-issue {
-    background: #fff3cd;
+    background: rgba(255, 193, 7, 0.15);
     border-left: 4px solid #ffc107;
     padding: 10px;
     margin: 10px 0;
     border-radius: 4px;
+    color: #ffc107;
 }
 
 .analysis-issue.critical {
-    background: #f8d7da;
+    background: rgba(220, 53, 69, 0.15);
     border-left-color: #dc3545;
+    color: #ff6b6b;
 }
 
 .analysis-issue.error {
-    background: #f8d7da;
+    background: rgba(220, 53, 69, 0.15);
     border-left-color: #dc3545;
+    color: #ff6b6b;
 }
 
 .analysis-suggestion {
-    background: #d1ecf1;
+    background: rgba(23, 162, 184, 0.15);
     border-left: 4px solid #17a2b8;
     padding: 10px;
     margin: 10px 0;
     border-radius: 4px;
+    color: #17a2b8;
 }
 
 .analysis-alternative {
-    background: #d4edda;
+    background: rgba(40, 167, 69, 0.15);
     border-left: 4px solid #28a745;
     padding: 10px;
     margin: 10px 0;
     border-radius: 4px;
+    color: #4dff4d;
 }
 </style>
 {% endblock %}
@@ -456,12 +480,18 @@
                     
                     // Alternatives
                     if (analysis.alternatives && analysis.alternatives.length > 0) {
-                        html += '<h4>🔄 Alternative Approaches</h4>';
+                        html += '<h4>🔄 Alternative Approaches & Recommended Code</h4>';
                         analysis.alternatives.forEach((alt, idx) => {
                             html += '<div class="analysis-alternative">';
                             html += '<p><strong>#' + (idx + 1) + ' ' + escapeHtml(alt.approach) + '</strong></p>';
                             html += '<p><strong>Benefit:</strong> ' + escapeHtml(alt.benefit) + '</p>';
                             html += '<p><strong>Example:</strong> <code>' + escapeHtml(alt.example) + '</code></p>';
+                            if (alt.recommended_code) {
+                                html += '<div style="margin-top: 10px; padding: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 255, 0, 0.3); border-radius: 4px;">';
+                                html += '<p><strong>💡 Recommended Code:</strong></p>';
+                                html += '<pre style="color: #4dff4d; margin: 5px 0; white-space: pre-wrap; word-wrap: break-word;">' + escapeHtml(alt.recommended_code) + '</pre>';
+                                html += '</div>';
+                            }
                             html += '</div>';
                         });
                     }

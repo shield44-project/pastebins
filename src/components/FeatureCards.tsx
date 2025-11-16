@@ -31,6 +31,11 @@ const features: Feature[] = [
     icon: '🗂️',
     title: 'Auto Categorization',
     description: 'Automatic organization by programming language'
+  },
+  {
+    icon: '📝',
+    title: 'Notes with Screenshots',
+    description: 'Create notes and attach screenshots for quick reference'
   }
 ];
 
