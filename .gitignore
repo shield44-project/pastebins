@@ -45,3 +45,10 @@ yarn.lock
 
 # TypeScript
 *.tsbuildinfo
+
+# Test generated files
+stored_codes/python/Test_Hello_World.py
+stored_codes/python/test.py
+
+# Pytest
+.pytest_cache/
