@@ -169,8 +169,8 @@ const PRELOADED_CODES = [
     "language": "python",
     "title": "Hello",
     "description": "Migrated from templates/code_samples/python/hello.py",
-    "filename": "hello.py",
-    "code": "print(\"Hello World!\")\n\nprint(\"Hello this is a python file and it runs print function. /n Python is a very useful programming language./n Python is easy to use and also has many inbuilt functions\")\n",
+    "filename": "Hello.py",
+    "code": "print(\"Hello World!\")\nprint(\"This has been edited!\")",
     "created": "2025-11-09T13:25:08.355785"
   },
   {
@@ -451,6 +451,15 @@ const PRELOADED_CODES = [
     "filename": "swggame.py",
     "code": "'''\ns=1\nw=-1\ng=0\n'''\ncomp = -1  # Let's say -1 represents \"Water\"\nyou_input = input(\"Enter your attack mode (Snake/Water/Gun): \")\n\n# Define the choices\nyouD = {\"Snake\": 1, \"Water\": -1, \"Gun\": 0}\n\n# Check if user input is valid\nif you_input not in youD:\n    print(\"Invalid input. Please choose from Snake, Water, or Gun.\")\nelse:\n    you = youD[you_input]\n\n    if comp == you:\n        print(\"The game is a draw.\")\n    elif (comp == -1 and you == 1) or (comp == 0 and you == -1) or (comp == 1 and you == 0):\n        print(\"You win!\")\n    else:\n        print(\"You lose!\")\n",
     "created": "2025-11-09T13:25:08.356785"
+  },
+  {
+    "id": "python_50",
+    "language": "python",
+    "title": "Test Upload",
+    "description": "",
+    "filename": "Test_Upload.py",
+    "code": "print(\"This is a test upload\")",
+    "created": "2025-11-16T08:20:07.117517"
   },
   {
     "id": "c_0",
