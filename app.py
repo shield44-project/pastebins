@@ -155,22 +155,53 @@ def check_compiler_available(compiler):
     """Check if a compiler/interpreter is available in the system."""
     return shutil.which(compiler) is not None
 
-def execute_c_code_online(code_content, stdin_input=''):
+def execute_code_online(code_content, stdin_input='', language='c'):
     """
-    Execute C code using an online compiler API.
+    Execute C, C++, or Java code using an online compiler API.
     Uses the Wandbox API (https://wandbox.org/).
+    
+    Args:
+        code_content: The source code to execute
+        stdin_input: Input to provide to the program
+        language: Programming language ('c', 'cpp', or 'java')
+    
+    Returns:
+        String containing the execution output or error message
     """
     try:
         # Prepare the request to Wandbox API
         url = 'https://wandbox.org/api/compile.json'
         
+        # Select compiler based on language
+        compiler_map = {
+            'c': 'gcc-head',
+            'cpp': 'gcc-head',  # Wandbox uses gcc-head for both C and C++
+            'java': 'openjdk-head'
+        }
+        
+        compiler_option_map = {
+            'c': '-O2 -Wall',
+            'cpp': '-O2 -Wall -std=c++17',
+            'java': ''
+        }
+        
+        language_name_map = {
+            'c': 'C',
+            'cpp': 'C++',
+            'java': 'Java'
+        }
+        
+        compiler = compiler_map.get(language, 'gcc-head')
+        compiler_options = compiler_option_map.get(language, '')
+        language_display = language_name_map.get(language, language.upper())
+        
         # Prepare the payload for Wandbox
         payload = {
-            'compiler': 'gcc-head',
+            'compiler': compiler,
             'code': code_content,
             'stdin': stdin_input,
             'options': '',
-            'compiler-option-raw': '-O2 -Wall',
+            'compiler-option-raw': compiler_options,
             'runtime-option-raw': '',
             'save': False
         }
@@ -219,11 +250,46 @@ def execute_c_code_online(code_content, stdin_input=''):
             
     except urllib.error.URLError as e:
         # Fallback message with helpful instructions
-        return f"Error: Unable to connect to online compiler service.\nPlease ensure you have an internet connection or install gcc locally to compile C code.\nDetails: {str(e)}"
+        compiler_install = {
+            'c': 'gcc',
+            'cpp': 'g++',
+            'java': 'Java JDK'
+        }
+        install_name = compiler_install.get(language, 'the compiler')
+        return f"Error: Unable to connect to online compiler service.\nPlease ensure you have an internet connection or install {install_name} locally to compile {language_display} code.\nDetails: {str(e)}"
     except urllib.error.HTTPError as e:
-        return f"Error: Online compiler service returned an error (HTTP {e.code}).\nPlease try again later or install gcc locally."
+        compiler_install = {
+            'c': 'gcc',
+            'cpp': 'g++',
+            'java': 'Java JDK'
+        }
+        install_name = compiler_install.get(language, 'the compiler')
+        return f"Error: Online compiler service returned an error (HTTP {e.code}).\nPlease try again later or install {install_name} locally."
     except Exception as e:
         return f"Error: Failed to execute code online.\nDetails: {str(e)}"
+
+def execute_c_code_online(code_content, stdin_input=''):
+    """
+    Execute C code using an online compiler API.
+    Uses the Wandbox API (https://wandbox.org/).
+    
+    This is a wrapper around execute_code_online for backward compatibility.
+    """
+    return execute_code_online(code_content, stdin_input, 'c')
+
+def execute_cpp_code_online(code_content, stdin_input=''):
+    """
+    Execute C++ code using an online compiler API.
+    Uses the Wandbox API (https://wandbox.org/).
+    """
+    return execute_code_online(code_content, stdin_input, 'cpp')
+
+def execute_java_code_online(code_content, stdin_input=''):
+    """
+    Execute Java code using an online compiler API.
+    Uses the Wandbox API (https://wandbox.org/).
+    """
+    return execute_code_online(code_content, stdin_input, 'java')
 
 # Ensure the codes directory exists
 os.makedirs(app.config['CODES_DIRECTORY'], exist_ok=True)
@@ -495,6 +561,48 @@ def decrypt_code(language, code_id):
     
     except Exception as e:
         return jsonify({'error': 'Decryption failed. Wrong password or corrupted file.'}), 403
+
+@app.route('/delete/<language>/<int:code_id>', methods=['POST', 'DELETE'])
+def delete_code(language, code_id):
+    """Delete a code file"""
+    if language not in LANGUAGES:
+        return jsonify({'error': 'Invalid language'}), 404
+    
+    metadata = load_code_metadata(language)
+    if code_id >= len(metadata):
+        return jsonify({'error': 'Code not found'}), 404
+    
+    code_info = metadata[code_id]
+    
+    try:
+        # Delete the file
+        code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+        if os.path.exists(code_path):
+            os.remove(code_path)
+        
+        # Delete encrypted file if it exists
+        if code_info.get('encrypted', False):
+            enc_path = code_path + '.enc'
+            if os.path.exists(enc_path):
+                os.remove(enc_path)
+        
+        # Remove from metadata
+        metadata.pop(code_id)
+        save_code_metadata(language, metadata)
+        
+        # Commit to GitHub if configured
+        if GITHUB_ENABLED and GITHUB_TOKEN:
+            try:
+                commit_metadata_to_github(language, metadata)
+                app.logger.info(f"Deleted file from GitHub: {code_info['filename']}")
+            except Exception as e:
+                app.logger.warning(f"File deleted locally but GitHub sync failed: {str(e)}")
+        
+        return jsonify({'success': True, 'message': 'Code deleted successfully'})
+    
+    except Exception as e:
+        app.logger.error(f"Failed to delete code: {str(e)}")
+        return jsonify({'error': 'Failed to delete code'}), 500
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_code():
@@ -813,12 +921,24 @@ def execute_code_file(language, code_path, stdin_input=''):
     with open(code_path, 'r') as f:
         code_content = f.read()
     
-    # For C language, use online compiler if gcc is not available
+    # For compiled languages (C, C++, Java), use online compiler if local compiler is not available
     if language == 'c':
         compiler = lang_config['compiler']
         if not check_compiler_available(compiler):
             # Use online compiler for C code
             return execute_c_code_online(code_content, stdin_input)
+    
+    if language == 'cpp':
+        compiler = lang_config['compiler']
+        if not check_compiler_available(compiler):
+            # Use online compiler for C++ code
+            return execute_cpp_code_online(code_content, stdin_input)
+    
+    if language == 'java':
+        compiler = lang_config['compiler']
+        if not check_compiler_available(compiler):
+            # Use online compiler for Java code
+            return execute_java_code_online(code_content, stdin_input)
     
     # Check if compiler/interpreter is available for other languages
     if lang_config.get('compile'):

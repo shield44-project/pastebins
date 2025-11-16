@@ -68,7 +68,10 @@
             <p class="code-description">{{ code_info.description }}</p>
             {% endif %}
         </div>
-        <a href="{{ url_for('category', language='html') }}" class="btn btn-secondary">Back to HTML</a>
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('category', language='html') }}" class="btn btn-secondary">Back to HTML</a>
+            <button id="delete-code" class="btn btn-danger">🗑️ Delete</button>
+        </div>
     </div>
 
     <div class="html-viewer-container">
@@ -180,6 +183,41 @@
                 modal.style.display = 'none';
                 document.getElementById('fullscreen-frame').src = '';
             }
+        }
+    });
+
+    // Delete code functionality
+    document.getElementById('delete-code').addEventListener('click', async function() {
+        if (!confirm('Are you sure you want to delete this HTML file? This action cannot be undone.')) {
+            return;
+        }
+        
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = '🗑️ Deleting...';
+        
+        try {
+            const response = await fetch('{{ url_for("delete_code", language=language, code_id=code_id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('HTML file deleted successfully!');
+                window.location.href = '{{ url_for("category", language=language) }}';
+            } else {
+                alert('Error: ' + (data.error || 'Failed to delete file'));
+                btn.disabled = false;
+                btn.textContent = '🗑️ Delete';
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+            btn.disabled = false;
+            btn.textContent = '🗑️ Delete';
         }
     });
 </script>
