@@ -31,6 +31,21 @@ except ImportError:
     GITHUB_ENABLED = False
     app.logger.warning("PyGithub not installed. GitHub integration disabled.")
 
+# Vercel Blob Storage integration
+try:
+    from blob_storage import VercelBlobStorage, get_blob_client, is_blob_storage_enabled
+    BLOB_STORAGE_ENABLED = is_blob_storage_enabled()
+    if BLOB_STORAGE_ENABLED:
+        blob_client = get_blob_client()
+        app.logger.info("Vercel Blob Storage enabled")
+    else:
+        blob_client = None
+        app.logger.info("Vercel Blob Storage disabled - no token configured")
+except ImportError as e:
+    BLOB_STORAGE_ENABLED = False
+    blob_client = None
+    app.logger.warning(f"Blob storage module not available: {str(e)}")
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
@@ -359,6 +374,14 @@ def load_code_metadata(language):
     # Validate language parameter
     if language not in LANGUAGES:
         return []
+    
+    # Try loading from blob storage first if enabled
+    if BLOB_STORAGE_ENABLED:
+        blob_metadata = load_code_metadata_from_blob(language)
+        if blob_metadata is not None:
+            return blob_metadata
+    
+    # Fallback to local filesystem
     metadata_path = get_code_metadata_path(language)
     if os.path.exists(metadata_path):
         with open(metadata_path, 'r') as f:
@@ -370,9 +393,45 @@ def save_code_metadata(language, metadata):
     # Validate language parameter
     if language not in LANGUAGES:
         raise ValueError(f"Invalid language: {language}")
+    
+    # Save to local filesystem
     metadata_path = get_code_metadata_path(language)
     with open(metadata_path, 'w') as f:
         json.dump(metadata, f, indent=2)
+    
+    # Also save to blob storage if enabled
+    if BLOB_STORAGE_ENABLED and blob_client:
+        try:
+            blob_pathname = f'stored_codes/{language}_metadata.json'
+            blob_client.put(
+                pathname=blob_pathname,
+                content=json.dumps(metadata, indent=2),
+                content_type='application/json'
+            )
+            app.logger.info(f"Metadata saved to blob storage: {blob_pathname}")
+        except Exception as e:
+            app.logger.warning(f"Failed to save metadata to blob storage: {str(e)}")
+            # Don't fail if blob storage fails - local storage is primary
+
+def load_code_metadata_from_blob(language):
+    """Load metadata for codes from blob storage"""
+    if not BLOB_STORAGE_ENABLED or not blob_client:
+        return None
+    
+    try:
+        blob_pathname = f'stored_codes/{language}_metadata.json'
+        # List blobs to find the metadata file
+        blobs = blob_client.list_blobs(prefix=blob_pathname)
+        if blobs:
+            # Get the first matching blob
+            blob_url = blobs[0].get('url') or blobs[0].get('downloadUrl')
+            if blob_url:
+                content = blob_client.get(blob_url)
+                return json.loads(content)
+    except Exception as e:
+        app.logger.warning(f"Failed to load metadata from blob storage: {str(e)}")
+    
+    return None
 
 @app.route('/')
 def index():
@@ -489,7 +548,6 @@ def view_code(language, code_id):
         return "Code not found", 404
     
     code_info = metadata[code_id]
-    code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
     
     # Check if file is encrypted
     is_encrypted = code_info.get('encrypted', False)
@@ -498,9 +556,24 @@ def view_code(language, code_id):
         # For encrypted files, show a password prompt instead of content
         code_content = None
     else:
-        # Read normal file content
-        with open(code_path, 'r') as f:
-            code_content = f.read()
+        # Try to fetch from blob storage first
+        code_content = None
+        if BLOB_STORAGE_ENABLED and blob_client and 'blob_url' in code_info:
+            try:
+                code_content = blob_client.get(code_info['blob_url'])
+                app.logger.info(f"Fetched code from blob storage: {code_info['blob_url']}")
+            except Exception as e:
+                app.logger.warning(f"Failed to fetch from blob storage, falling back to local: {str(e)}")
+                code_content = None
+        
+        # Fallback to local filesystem if blob fetch failed or not available
+        if code_content is None:
+            code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+            try:
+                with open(code_path, 'r') as f:
+                    code_content = f.read()
+            except FileNotFoundError:
+                return "Code file not found", 404
     
     # Check language type
     lang_config = LANGUAGES[language]
@@ -575,7 +648,15 @@ def delete_code(language, code_id):
     code_info = metadata[code_id]
     
     try:
-        # Delete the file
+        # Delete from blob storage if available
+        if BLOB_STORAGE_ENABLED and blob_client and 'blob_url' in code_info:
+            try:
+                blob_client.delete(code_info['blob_url'])
+                app.logger.info(f"Deleted file from blob storage: {code_info['blob_url']}")
+            except Exception as e:
+                app.logger.warning(f"Failed to delete from blob storage: {str(e)}")
+        
+        # Delete the local file
         code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
         if os.path.exists(code_path):
             os.remove(code_path)
@@ -618,16 +699,29 @@ def edit_code(language, code_id):
     
     if request.method == 'GET':
         # Load the code content for editing
-        code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
-        
         # Check if file is encrypted
         if code_info.get('encrypted', False):
             # For encrypted files, we can't edit them without decryption
             # Redirect back to view page with a message
             return redirect(url_for('view_code', language=language, code_id=code_id))
         
-        with open(code_path, 'r') as f:
-            code_content = f.read()
+        # Try to fetch from blob storage first
+        code_content = None
+        if BLOB_STORAGE_ENABLED and blob_client and 'blob_url' in code_info:
+            try:
+                code_content = blob_client.get(code_info['blob_url'])
+                app.logger.info(f"Fetched code from blob storage for editing: {code_info['blob_url']}")
+            except Exception as e:
+                app.logger.warning(f"Failed to fetch from blob storage for editing: {str(e)}")
+        
+        # Fallback to local filesystem
+        if code_content is None:
+            code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+            try:
+                with open(code_path, 'r') as f:
+                    code_content = f.read()
+            except FileNotFoundError:
+                return "Code file not found", 404
         
         # Render the upload template in edit mode
         return render_template('upload.html', 
@@ -709,9 +803,46 @@ def edit_code(language, code_id):
                     # Don't update filename in metadata
             
             # Write the updated content
+            blob_url = code_info.get('blob_url')  # Keep existing blob URL
             try:
                 with open(code_path, 'w') as f:
                     f.write(code_content)
+                
+                # Also update in blob storage if enabled
+                if BLOB_STORAGE_ENABLED and blob_client:
+                    try:
+                        # Delete old blob if it exists
+                        if blob_url:
+                            try:
+                                blob_client.delete(blob_url)
+                                app.logger.info(f"Deleted old blob: {blob_url}")
+                            except Exception as e:
+                                app.logger.warning(f"Failed to delete old blob: {str(e)}")
+                        
+                        # Upload new version
+                        blob_pathname = f'stored_codes/{language}/{code_info["filename"]}'
+                        content_types = {
+                            'python': 'text/x-python',
+                            'java': 'text/x-java',
+                            'c': 'text/x-c',
+                            'cpp': 'text/x-c++',
+                            'html': 'text/html',
+                            'javascript': 'text/javascript',
+                            'typescript': 'text/typescript'
+                        }
+                        content_type = content_types.get(language, 'text/plain')
+                        
+                        result = blob_client.put(
+                            pathname=blob_pathname,
+                            content=code_content,
+                            content_type=content_type
+                        )
+                        blob_url = result.get('url')
+                        code_info['blob_url'] = blob_url
+                        app.logger.info(f"Updated file in blob storage: {blob_pathname}")
+                    except Exception as e:
+                        app.logger.warning(f"Failed to update file in blob storage: {str(e)}")
+                        
             except (OSError, PermissionError) as e:
                 # File system is read-only, cannot update file content
                 app.logger.error(f"Cannot write to file (read-only filesystem): {str(e)}")
@@ -832,16 +963,57 @@ def upload_code():
             
             # Handle encryption if requested
             encrypted_data = None
+            blob_url = None  # Store blob URL for metadata
             try:
                 if encrypt:
                     encrypted_data = encrypt_content_with_password(code_content, password)
                     # Save encrypted data to file
                     with open(filepath + '.enc', 'w') as f:
                         json.dump(encrypted_data, f)
+                    
+                    # Also save to blob storage if enabled
+                    if BLOB_STORAGE_ENABLED and blob_client:
+                        try:
+                            blob_pathname = f'stored_codes/{language}/{filename}.enc'
+                            result = blob_client.put(
+                                pathname=blob_pathname,
+                                content=json.dumps(encrypted_data, indent=2),
+                                content_type='application/json'
+                            )
+                            blob_url = result.get('url')
+                            app.logger.info(f"Encrypted file uploaded to blob storage: {blob_pathname}")
+                        except Exception as e:
+                            app.logger.warning(f"Failed to upload encrypted file to blob storage: {str(e)}")
                 else:
                     # Save the code file normally
                     with open(filepath, 'w') as f:
                         f.write(code_content)
+                    
+                    # Also save to blob storage if enabled
+                    if BLOB_STORAGE_ENABLED and blob_client:
+                        try:
+                            blob_pathname = f'stored_codes/{language}/{filename}'
+                            # Determine content type based on language
+                            content_types = {
+                                'python': 'text/x-python',
+                                'java': 'text/x-java',
+                                'c': 'text/x-c',
+                                'cpp': 'text/x-c++',
+                                'html': 'text/html',
+                                'javascript': 'text/javascript',
+                                'typescript': 'text/typescript'
+                            }
+                            content_type = content_types.get(language, 'text/plain')
+                            
+                            result = blob_client.put(
+                                pathname=blob_pathname,
+                                content=code_content,
+                                content_type=content_type
+                            )
+                            blob_url = result.get('url')
+                            app.logger.info(f"File uploaded to blob storage: {blob_pathname}")
+                        except Exception as e:
+                            app.logger.warning(f"Failed to upload file to blob storage: {str(e)}")
             except PermissionError as e:
                 app.logger.error(f"Permission error saving file {filepath}: {str(e)}")
                 return jsonify({'error': 'Permission denied - cannot write file. The server may have limited write permissions.'}), 500
@@ -858,6 +1030,11 @@ def upload_code():
                 'encrypted': encrypt,
                 'is_secret': is_secret
             }
+            
+            # Add blob URL to metadata if available
+            if blob_url:
+                code_info['blob_url'] = blob_url
+            
             metadata.append(code_info)
             
             try:
