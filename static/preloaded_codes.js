@@ -877,9 +877,14 @@ function loadPreloadedCodes() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(PRELOADED_CODES));
     
     console.log(`Loaded ${PRELOADED_CODES.length} preloaded code files`);
+    
+    // Dispatch custom event to notify that codes are loaded
+    if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("preloadedCodesReady"));
+    }
 }
 
-// Auto-load on page load
+// Auto-load immediately (before DOMContentLoaded)
 if (typeof window !== "undefined") {
-    window.addEventListener("DOMContentLoaded", loadPreloadedCodes);
+    loadPreloadedCodes();
 }

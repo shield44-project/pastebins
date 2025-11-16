@@ -1,21 +1,22 @@
 {
   "version": 2,
-  "builds": [
+  "buildCommand": "bash build.sh",
+  "outputDirectory": ".",
+  "headers": [
     {
-      "src": "app.py",
-      "use": "@vercel/python"
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "app.py"
+      "source": "/",
+      "destination": "/index.html"
     }
-  ],
-  "env": {
-    "FLASK_DEBUG": "False",
-    "CODES_DIRECTORY": "/tmp/stored_codes",
-    "GITHUB_REPO": "shield44-project/pastebins",
-    "GITHUB_BRANCH": "main"
-  }
+  ]
 }
