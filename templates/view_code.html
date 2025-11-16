@@ -62,6 +62,9 @@
         <div class="execution-controls">
             <h2>Execute Code</h2>
             <button id="run-code" class="btn btn-primary">▶️ Run Code</button>
+            {% if language in ['c', 'cpp'] %}
+            <button id="analyze-code" class="btn btn-secondary" style="margin-left: 10px;">🤖 AI Code Analysis</button>
+            {% endif %}
         </div>
         
         <div class="input-section">
@@ -75,6 +78,13 @@
                 <p class="output-placeholder">Click "Run Code" to see the output</p>
             </div>
         </div>
+        
+        {% if language in ['c', 'cpp'] %}
+        <div class="analysis-section" id="analysis-section" style="display: none;">
+            <h3>AI Code Analysis</h3>
+            <div id="analysis-output" class="analysis-display"></div>
+        </div>
+        {% endif %}
     </div>
     
     {% if code_info.encrypted and not code_content %}
@@ -126,6 +136,74 @@
     color: #dc3545;
     margin-top: 15px;
     font-weight: bold;
+}
+
+.analysis-section {
+    margin-top: 30px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.analysis-display {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    max-height: 600px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    white-space: pre-wrap;
+}
+
+.analysis-display pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.analysis-summary {
+    background: #e7f3ff;
+    border-left: 4px solid #007bff;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.analysis-issue {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+.analysis-issue.critical {
+    background: #f8d7da;
+    border-left-color: #dc3545;
+}
+
+.analysis-issue.error {
+    background: #f8d7da;
+    border-left-color: #dc3545;
+}
+
+.analysis-suggestion {
+    background: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+.analysis-alternative {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
 }
 </style>
 {% endblock %}
@@ -304,6 +382,107 @@
             }
         });
     }
+
+    // AI Code Analysis functionality (only for C/C++)
+    {% if language in ['c', 'cpp'] %}
+    const analyzeBtn = document.getElementById('analyze-code');
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', async function() {
+            const btn = this;
+            const analysisSection = document.getElementById('analysis-section');
+            const analysisOutput = document.getElementById('analysis-output');
+            
+            btn.disabled = true;
+            btn.textContent = '🤖 Analyzing...';
+            analysisSection.style.display = 'block';
+            analysisOutput.innerHTML = '<p>Analyzing your code...</p>';
+            
+            try {
+                const response = await fetch('{{ url_for("analyze_code_route", language=language, code_id=code_id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Format the analysis results
+                    const analysis = data.analysis;
+                    let html = '';
+                    
+                    // Summary
+                    html += '<div class="analysis-summary">';
+                    html += '<h4>📊 Analysis Summary</h4>';
+                    html += '<p><strong>Total Issues:</strong> ' + analysis.summary.total_issues + '</p>';
+                    html += '<p><strong>Critical:</strong> ' + analysis.summary.critical + ' | ';
+                    html += '<strong>Errors:</strong> ' + analysis.summary.errors + ' | ';
+                    html += '<strong>Warnings:</strong> ' + analysis.summary.warnings + '</p>';
+                    html += '<p><strong>Suggestions:</strong> ' + analysis.summary.suggestions + '</p>';
+                    html += '<p><strong>Alternative Approaches:</strong> ' + analysis.summary.alternatives + '</p>';
+                    html += '</div>';
+                    
+                    // Issues
+                    if (analysis.issues && analysis.issues.length > 0) {
+                        html += '<h4>🔴 Issues Found</h4>';
+                        analysis.issues.forEach((issue, idx) => {
+                            const severity = issue.severity || 'warning';
+                            html += '<div class="analysis-issue ' + severity + '">';
+                            html += '<p><strong>#' + (idx + 1) + ' [' + severity.toUpperCase() + '] ' + (issue.type || 'general').toUpperCase() + '</strong></p>';
+                            if (issue.line) {
+                                html += '<p><em>Line: ' + issue.line + '</em></p>';
+                            }
+                            html += '<p>⚠️ ' + escapeHtml(issue.message) + '</p>';
+                            html += '<p>💡 <strong>Fix:</strong> ' + escapeHtml(issue.suggestion) + '</p>';
+                            html += '</div>';
+                        });
+                    }
+                    
+                    // Suggestions
+                    if (analysis.suggestions && analysis.suggestions.length > 0) {
+                        html += '<h4>💡 Suggestions for Improvement</h4>';
+                        analysis.suggestions.forEach((suggestion, idx) => {
+                            html += '<div class="analysis-suggestion">';
+                            html += '<p><strong>#' + (idx + 1) + ' [' + (suggestion.type || 'general').toUpperCase() + ']</strong></p>';
+                            if (suggestion.line) {
+                                html += '<p><em>Line: ' + suggestion.line + '</em></p>';
+                            }
+                            html += '<p>' + escapeHtml(suggestion.message) + '</p>';
+                            html += '<p><strong>Suggestion:</strong> ' + escapeHtml(suggestion.suggestion) + '</p>';
+                            html += '</div>';
+                        });
+                    }
+                    
+                    // Alternatives
+                    if (analysis.alternatives && analysis.alternatives.length > 0) {
+                        html += '<h4>🔄 Alternative Approaches</h4>';
+                        analysis.alternatives.forEach((alt, idx) => {
+                            html += '<div class="analysis-alternative">';
+                            html += '<p><strong>#' + (idx + 1) + ' ' + escapeHtml(alt.approach) + '</strong></p>';
+                            html += '<p><strong>Benefit:</strong> ' + escapeHtml(alt.benefit) + '</p>';
+                            html += '<p><strong>Example:</strong> <code>' + escapeHtml(alt.example) + '</code></p>';
+                            html += '</div>';
+                        });
+                    }
+                    
+                    if (analysis.summary.total_issues === 0 && analysis.summary.suggestions === 0 && analysis.summary.alternatives === 0) {
+                        html += '<p>✅ No issues found! Your code looks good.</p>';
+                    }
+                    
+                    analysisOutput.innerHTML = html;
+                } else {
+                    analysisOutput.innerHTML = '<p class="output-error">Error: ' + escapeHtml(data.error || 'Analysis failed') + '</p>';
+                }
+            } catch (error) {
+                analysisOutput.innerHTML = '<p class="output-error">Error: ' + escapeHtml(error.message) + '</p>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 AI Code Analysis';
+            }
+        });
+    }
+    {% endif %}
 
 </script>
 {% endblock %}

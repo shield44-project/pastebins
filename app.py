@@ -23,6 +23,10 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
+# Import enhanced compiler and code analyzer
+from enhanced_compiler import EnhancedCompiler
+from code_analyzer import CodeAnalyzer, analyze_code, get_analysis_report
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
@@ -1481,6 +1485,151 @@ def execute_code_file(language, code_path, stdin_input=''):
             return "Error: Execution timed out (5 seconds limit)"
         except Exception as e:
             return f"Error: {str(e)}"
+
+@app.route('/analyze/<language>/<int:code_id>', methods=['POST'])
+def analyze_code_route(language, code_id):
+    """Analyze C/C++ code and provide AI-powered suggestions"""
+    if language not in ['c', 'cpp']:
+        return jsonify({'error': 'Code analysis only available for C and C++ code'}), 400
+    
+    metadata = load_code_metadata(language)
+    if code_id >= len(metadata):
+        return jsonify({'error': 'Code not found'}), 404
+    
+    code_info = metadata[code_id]
+    
+    # Try to fetch from blob storage first
+    code_content = None
+    if BLOB_STORAGE_ENABLED and blob_client and 'blob_url' in code_info:
+        try:
+            code_content = blob_client.get(code_info['blob_url'])
+        except Exception as e:
+            app.logger.warning(f"Failed to fetch from blob storage: {str(e)}")
+    
+    # Fallback to local filesystem
+    if code_content is None:
+        code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+        try:
+            with open(code_path, 'r') as f:
+                code_content = f.read()
+        except FileNotFoundError:
+            return jsonify({'error': 'Code file not found'}), 404
+    
+    try:
+        # Perform code analysis
+        analysis = analyze_code(code_content, language)
+        
+        return jsonify({
+            'success': True,
+            'analysis': analysis
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to analyze code: {str(e)}")
+        return jsonify({'error': 'Failed to analyze code'}), 500
+
+@app.route('/api/analyze-code', methods=['POST'])
+def analyze_code_api():
+    """API endpoint to analyze arbitrary C/C++ code"""
+    data = request.json
+    
+    if not data or 'code' not in data or 'language' not in data:
+        return jsonify({'error': 'Code and language are required'}), 400
+    
+    code = data['code']
+    language = data['language']
+    
+    if language not in ['c', 'cpp']:
+        return jsonify({'error': 'Language must be c or cpp'}), 400
+    
+    try:
+        # Perform code analysis
+        analysis = analyze_code(code, language)
+        
+        return jsonify({
+            'success': True,
+            'analysis': analysis
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to analyze code: {str(e)}")
+        return jsonify({'error': f'Failed to analyze code: {str(e)}'}), 500
+
+@app.route('/execute-enhanced/<language>/<int:code_id>', methods=['POST'])
+def execute_enhanced(language, code_id):
+    """Execute code using enhanced compiler with better error messages and options"""
+    if language not in ['c', 'cpp']:
+        return jsonify({'error': 'Enhanced compilation only available for C and C++'}), 400
+    
+    metadata = load_code_metadata(language)
+    if code_id >= len(metadata):
+        return jsonify({'error': 'Code not found'}), 404
+    
+    code_info = metadata[code_id]
+    
+    # Try to fetch from blob storage first
+    code_content = None
+    if BLOB_STORAGE_ENABLED and blob_client and 'blob_url' in code_info:
+        try:
+            code_content = blob_client.get(code_info['blob_url'])
+        except Exception as e:
+            app.logger.warning(f"Failed to fetch from blob storage: {str(e)}")
+    
+    # Fallback to local filesystem
+    if code_content is None:
+        code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+        try:
+            with open(code_path, 'r') as f:
+                code_content = f.read()
+        except FileNotFoundError:
+            return jsonify({'error': 'Code file not found'}), 404
+    
+    # Get compilation options from request
+    data = request.json if request.is_json else {}
+    stdin_input = data.get('input', '')
+    standard = data.get('standard', 'c11' if language == 'c' else 'c++17')
+    optimization = data.get('optimization', '-O2')
+    use_warnings = data.get('use_warnings', True)
+    
+    try:
+        # Use enhanced compiler
+        compiler = EnhancedCompiler()
+        
+        if language == 'c':
+            result = compiler.compile_and_run_c(
+                code_content, stdin_input, standard, optimization, 
+                use_warnings=use_warnings
+            )
+        else:  # cpp
+            result = compiler.compile_and_run_cpp(
+                code_content, stdin_input, standard, optimization,
+                use_warnings=use_warnings
+            )
+        
+        return jsonify({
+            'success': result.success,
+            'output': result.output,
+            'errors': result.errors,
+            'warnings': result.warnings,
+            'compile_time': result.compile_time,
+            'execution_time': result.execution_time
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to execute code: {str(e)}")
+        return jsonify({'error': f'Failed to execute code: {str(e)}', 'success': False}), 500
+
+@app.route('/api/compiler-info', methods=['GET'])
+def get_compiler_info():
+    """Get information about available compilers"""
+    try:
+        compiler = EnhancedCompiler()
+        info = compiler.get_compiler_info()
+        
+        return jsonify({
+            'success': True,
+            'compilers': info
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to get compiler info: {str(e)}")
+        return jsonify({'error': f'Failed to get compiler info: {str(e)}'}), 500
 
 @app.route('/api/folders', methods=['GET'])
 def list_folders():
