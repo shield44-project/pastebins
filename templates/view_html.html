@@ -70,6 +70,7 @@
         </div>
         <div style="display: flex; gap: 10px;">
             <a href="{{ url_for('category', language='html') }}" class="btn btn-secondary">Back to HTML</a>
+            <a href="{{ url_for('edit_code', language=language, code_id=code_id) }}" class="btn btn-primary">✏️ Edit</a>
             <button id="delete-code" class="btn btn-danger">🗑️ Delete</button>
         </div>
     </div>

@@ -604,6 +604,108 @@ def delete_code(language, code_id):
         app.logger.error(f"Failed to delete code: {str(e)}")
         return jsonify({'error': 'Failed to delete code'}), 500
 
+@app.route('/edit/<language>/<int:code_id>', methods=['GET', 'POST'])
+def edit_code(language, code_id):
+    """Edit an existing code file"""
+    if language not in LANGUAGES:
+        return "Invalid language", 404
+    
+    metadata = load_code_metadata(language)
+    if code_id >= len(metadata):
+        return "Code not found", 404
+    
+    code_info = metadata[code_id]
+    
+    if request.method == 'GET':
+        # Load the code content for editing
+        code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+        
+        # Check if file is encrypted
+        if code_info.get('encrypted', False):
+            # For encrypted files, we can't edit them without decryption
+            # Redirect back to view page with a message
+            return redirect(url_for('view_code', language=language, code_id=code_id))
+        
+        with open(code_path, 'r') as f:
+            code_content = f.read()
+        
+        # Render the upload template in edit mode
+        return render_template('upload.html', 
+                             languages=LANGUAGES, 
+                             edit_mode=True,
+                             language=language,
+                             code_id=code_id,
+                             code_info=code_info,
+                             code_content=code_content)
+    
+    elif request.method == 'POST':
+        # Update the code file
+        try:
+            title = request.form.get('title')
+            description = request.form.get('description', '')
+            code_content = request.form.get('code')
+            
+            if not title or not code_content:
+                return jsonify({'error': 'Title and code are required'}), 400
+            
+            # Validate title to prevent path traversal
+            if '/' in title or '\\' in title or title.startswith('.'):
+                return jsonify({'error': 'Invalid title - cannot contain path separators'}), 400
+            
+            # Update the code file
+            code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+            
+            # Check if we need to rename the file (if title changed)
+            safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')
+            if not safe_title:
+                safe_title = 'unnamed'
+            new_filename = f"{safe_title}{LANGUAGES[language]['extension']}"
+            
+            # If filename changed, rename the file
+            if new_filename != code_info['filename']:
+                new_code_path = os.path.join(app.config['CODES_DIRECTORY'], language, new_filename)
+                # Check if new filename already exists
+                if os.path.exists(new_code_path) and new_code_path != code_path:
+                    return jsonify({'error': 'A file with this name already exists'}), 400
+                # Rename the file
+                if os.path.exists(code_path):
+                    os.rename(code_path, new_code_path)
+                code_path = new_code_path
+                code_info['filename'] = new_filename
+            
+            # Write the updated content
+            with open(code_path, 'w') as f:
+                f.write(code_content)
+            
+            # Update metadata
+            code_info['title'] = title
+            code_info['description'] = description
+            code_info['modified_at'] = datetime.now().isoformat()
+            
+            metadata[code_id] = code_info
+            save_code_metadata(language, metadata)
+            
+            # Commit to GitHub if configured
+            if GITHUB_ENABLED and GITHUB_TOKEN:
+                try:
+                    # Commit the updated code file
+                    github_file_path = f"stored_codes/{language}/{new_filename}"
+                    commit_message = f"Update {language} file: {title} via web edit"
+                    commit_file_to_github(github_file_path, code_content, commit_message)
+                    
+                    # Commit the metadata
+                    commit_metadata_to_github(language, metadata)
+                    
+                    app.logger.info(f"Successfully updated in GitHub: {github_file_path}")
+                except Exception as e:
+                    app.logger.warning(f"File updated locally but GitHub commit failed: {str(e)}")
+            
+            return redirect(url_for('view_code', language=language, code_id=code_id))
+        
+        except Exception as e:
+            app.logger.error(f"Failed to update code: {str(e)}")
+            return jsonify({'error': 'Failed to update code'}), 500
+
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_code():
     """Upload a new code file"""
