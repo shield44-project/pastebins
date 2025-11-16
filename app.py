@@ -394,12 +394,19 @@ def save_code_metadata(language, metadata):
     if language not in LANGUAGES:
         raise ValueError(f"Invalid language: {language}")
     
-    # Save to local filesystem
+    # Try to save to local filesystem
     metadata_path = get_code_metadata_path(language)
-    with open(metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
+    local_save_failed = False
+    try:
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+    except (OSError, PermissionError) as e:
+        app.logger.warning(f"Cannot save metadata to local file (read-only filesystem): {str(e)}")
+        local_save_failed = True
+        # Continue to try blob storage
     
     # Also save to blob storage if enabled
+    blob_save_failed = False
     if BLOB_STORAGE_ENABLED and blob_client:
         try:
             blob_pathname = f'stored_codes/{language}_metadata.json'
@@ -411,7 +418,11 @@ def save_code_metadata(language, metadata):
             app.logger.info(f"Metadata saved to blob storage: {blob_pathname}")
         except Exception as e:
             app.logger.warning(f"Failed to save metadata to blob storage: {str(e)}")
-            # Don't fail if blob storage fails - local storage is primary
+            blob_save_failed = True
+    
+    # If both storage methods failed, raise an error
+    if local_save_failed and (not BLOB_STORAGE_ENABLED or blob_save_failed):
+        raise Exception("Failed to save metadata: both local and blob storage failed. Please configure BLOB_READ_WRITE_TOKEN.")
 
 def load_code_metadata_from_blob(language):
     """Load metadata for codes from blob storage"""
@@ -945,11 +956,18 @@ def upload_code():
             
             # Create language directory if it doesn't exist
             lang_dir = os.path.join(app.config['CODES_DIRECTORY'], language)
+            local_storage_available = True
             try:
                 os.makedirs(lang_dir, exist_ok=True)
             except OSError as e:
-                app.logger.error(f"Failed to create directory {lang_dir}: {str(e)}")
-                return jsonify({'error': 'Failed to create storage directory. The server may have limited write permissions.'}), 500
+                # If blob storage is enabled, we can continue without local storage
+                if BLOB_STORAGE_ENABLED and blob_client:
+                    app.logger.warning(f"Local storage unavailable (read-only filesystem), using blob storage only: {str(e)}")
+                    local_storage_available = False
+                else:
+                    # No blob storage and can't create local directory - fail
+                    app.logger.error(f"Failed to create directory {lang_dir}: {str(e)}")
+                    return jsonify({'error': 'Failed to create storage directory. The server may have limited write permissions.'}), 500
             
             # Load existing metadata
             metadata = load_code_metadata(language)
@@ -967,11 +985,19 @@ def upload_code():
             try:
                 if encrypt:
                     encrypted_data = encrypt_content_with_password(code_content, password)
-                    # Save encrypted data to file
-                    with open(filepath + '.enc', 'w') as f:
-                        json.dump(encrypted_data, f)
                     
-                    # Also save to blob storage if enabled
+                    # Try to save encrypted data to local file if local storage is available
+                    if local_storage_available:
+                        try:
+                            with open(filepath + '.enc', 'w') as f:
+                                json.dump(encrypted_data, f)
+                        except (OSError, PermissionError) as e:
+                            app.logger.warning(f"Cannot write to local file (read-only filesystem): {str(e)}")
+                            # Continue if blob storage is available
+                            if not (BLOB_STORAGE_ENABLED and blob_client):
+                                raise
+                    
+                    # Save to blob storage if enabled
                     if BLOB_STORAGE_ENABLED and blob_client:
                         try:
                             blob_pathname = f'stored_codes/{language}/{filename}.enc'
@@ -983,13 +1009,27 @@ def upload_code():
                             blob_url = result.get('url')
                             app.logger.info(f"Encrypted file uploaded to blob storage: {blob_pathname}")
                         except Exception as e:
-                            app.logger.warning(f"Failed to upload encrypted file to blob storage: {str(e)}")
+                            app.logger.error(f"Failed to upload encrypted file to blob storage: {str(e)}")
+                            # If local storage also failed, this is a critical error
+                            if not local_storage_available:
+                                return jsonify({'error': f'Failed to save file to blob storage: {str(e)}'}), 500
+                            app.logger.warning(f"Blob storage failed but local file saved")
+                    elif not local_storage_available:
+                        # No blob storage and no local storage - fail
+                        return jsonify({'error': 'No storage available. Please configure BLOB_READ_WRITE_TOKEN or fix filesystem permissions.'}), 500
                 else:
-                    # Save the code file normally
-                    with open(filepath, 'w') as f:
-                        f.write(code_content)
+                    # Try to save the code file normally to local storage if available
+                    if local_storage_available:
+                        try:
+                            with open(filepath, 'w') as f:
+                                f.write(code_content)
+                        except (OSError, PermissionError) as e:
+                            app.logger.warning(f"Cannot write to local file (read-only filesystem): {str(e)}")
+                            # Continue if blob storage is available
+                            if not (BLOB_STORAGE_ENABLED and blob_client):
+                                raise
                     
-                    # Also save to blob storage if enabled
+                    # Save to blob storage if enabled
                     if BLOB_STORAGE_ENABLED and blob_client:
                         try:
                             blob_pathname = f'stored_codes/{language}/{filename}'
@@ -1013,7 +1053,14 @@ def upload_code():
                             blob_url = result.get('url')
                             app.logger.info(f"File uploaded to blob storage: {blob_pathname}")
                         except Exception as e:
-                            app.logger.warning(f"Failed to upload file to blob storage: {str(e)}")
+                            app.logger.error(f"Failed to upload file to blob storage: {str(e)}")
+                            # If local storage also failed, this is a critical error
+                            if not local_storage_available:
+                                return jsonify({'error': f'Failed to save file to blob storage: {str(e)}'}), 500
+                            app.logger.warning(f"Blob storage failed but local file saved")
+                    elif not local_storage_available:
+                        # No blob storage and no local storage - fail
+                        return jsonify({'error': 'No storage available. Please configure BLOB_READ_WRITE_TOKEN or fix filesystem permissions.'}), 500
             except PermissionError as e:
                 app.logger.error(f"Permission error saving file {filepath}: {str(e)}")
                 return jsonify({'error': 'Permission denied - cannot write file. The server may have limited write permissions.'}), 500
