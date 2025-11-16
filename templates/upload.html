@@ -1,46 +1,59 @@
 {% extends "base.html" %}
 
-{% block title %}Upload Code{% endblock %}
+{% block title %}{% if edit_mode %}Edit Code{% else %}Upload Code{% endif %}{% endblock %}
 
 {% block content %}
 <div class="upload-page">
-    <h1>Upload New Code</h1>
+    <h1>{% if edit_mode %}Edit Code{% else %}Upload New Code{% endif %}</h1>
     
+    {% if error %}
+    <div class="error-message">
+        <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+    
+    {% if not edit_mode %}
     <!-- Tab navigation -->
     <div class="upload-tabs">
         <button class="tab-btn active" onclick="switchTab('paste')">📝 Paste Code</button>
         <button class="tab-btn" onclick="switchTab('files')">📁 Upload Files</button>
     </div>
+    {% endif %}
     
-    <!-- Paste Code Tab -->
-    <form method="POST" action="{{ url_for('upload_code') }}" class="upload-form" id="pasteForm">
+    <!-- Paste Code Tab (or Edit Form) -->
+    <form method="POST" action="{% if edit_mode %}{{ url_for('edit_code', language=language, code_id=code_id) }}{% else %}{{ url_for('upload_code') }}{% endif %}" class="upload-form" id="pasteForm">
         <div class="form-group">
             <label for="language">Language *</label>
-            <select name="language" id="language" required>
+            <select name="language" id="language" required {% if edit_mode %}disabled{% endif %}>
                 <option value="">Select Language</option>
-                <option value="python">Python</option>
-                <option value="java">Java</option>
-                <option value="c">C</option>
-                <option value="cpp">C++</option>
-                <option value="html">HTML/Website</option>
+                <option value="python" {% if edit_mode and language == 'python' %}selected{% endif %}>Python</option>
+                <option value="java" {% if edit_mode and language == 'java' %}selected{% endif %}>Java</option>
+                <option value="c" {% if edit_mode and language == 'c' %}selected{% endif %}>C</option>
+                <option value="cpp" {% if edit_mode and language == 'cpp' %}selected{% endif %}>C++</option>
+                <option value="html" {% if edit_mode and language == 'html' %}selected{% endif %}>HTML/Website</option>
             </select>
+            {% if edit_mode %}
+            <input type="hidden" name="language" value="{{ language }}">
+            <p class="help-text">Language cannot be changed when editing</p>
+            {% endif %}
         </div>
 
         <div class="form-group">
             <label for="title">Title *</label>
-            <input type="text" name="title" id="title" required placeholder="e.g., Hello World">
+            <input type="text" name="title" id="title" required placeholder="e.g., Hello World" {% if edit_mode %}value="{{ code_info.title }}"{% endif %}>
         </div>
 
         <div class="form-group">
             <label for="description">Description (optional)</label>
-            <textarea name="description" id="description" rows="3" placeholder="Brief description of your code"></textarea>
+            <textarea name="description" id="description" rows="3" placeholder="Brief description of your code">{% if edit_mode %}{{ code_info.description }}{% endif %}</textarea>
         </div>
 
         <div class="form-group">
             <label for="code">Code *</label>
-            <textarea name="code" id="code" required rows="20" placeholder="Paste your code here..."></textarea>
+            <textarea name="code" id="code" required rows="20" placeholder="Paste your code here...">{% if edit_mode %}{{ code_content }}{% endif %}</textarea>
         </div>
 
+        {% if not edit_mode %}
         <!-- Encryption Options -->
         <div class="form-group">
             <label>
@@ -63,14 +76,15 @@
             </label>
             <p class="help-text">Secret files will only be visible in the "Secret Folders" section.</p>
         </div>
+        {% endif %}
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Upload Code</button>
-            <a href="/" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">{% if edit_mode %}💾 Save Changes{% else %}Upload Code{% endif %}</button>
+            <a href="{% if edit_mode %}{{ url_for('view_code', language=language, code_id=code_id) }}{% else %}/{% endif %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
     
-    <!-- Upload Files Tab -->
+    {% if not edit_mode %}
     <form method="POST" action="{{ url_for('upload_files') }}" enctype="multipart/form-data" class="upload-form" id="filesForm" style="display: none;">
         <div class="form-group">
             <label for="file_language">Language *</label>
@@ -120,9 +134,25 @@
             <a href="/" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
+    {% endif %}
 </div>
 
 <style>
+.error-message {
+    background: #fee;
+    border: 1px solid #fcc;
+    border-left: 4px solid #f44;
+    color: #c33;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.error-message strong {
+    font-weight: 600;
+}
+
 .upload-tabs {
     display: flex;
     gap: 10px;
