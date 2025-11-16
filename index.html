@@ -437,6 +437,83 @@
             font-size: 0.9em;
             color: #b0b0b0;
         }
+        
+        /* Search Bar Styles */
+        .search-container {
+            margin-bottom: 25px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            background: rgba(0, 0, 0, 0.5);
+            color: #00ff00;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+        
+        .search-input::placeholder {
+            color: rgba(0, 255, 0, 0.5);
+        }
+        
+        .search-button {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #00ff00, #00aa00);
+            color: #000;
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4);
+        }
+        
+        .search-button:hover {
+            background: linear-gradient(135deg, #00ff00, #00cc00);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 0, 0.6);
+        }
+        
+        .clear-search {
+            padding: 12px 25px;
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .clear-search:hover {
+            background: rgba(0, 255, 0, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 255, 0, 0.3);
+        }
+        
+        .search-results-info {
+            color: #00ff00;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.05);
+            border-radius: 5px;
+            border-left: 3px solid #00ff00;
+        }
     </style>
 </head>
 <body>
@@ -1496,7 +1573,7 @@ cd codes_storer_website</div>
         }
         
         // Display stored files
-        function loadStoredFiles() {
+        function loadStoredFiles(searchQuery = '') {
             const files = getStoredFiles();
             const container = document.querySelector('.card');
             
@@ -1507,11 +1584,26 @@ cd codes_storer_website</div>
             }
             
             if (files.length > 0) {
+                // Filter files based on search query
+                const filteredFiles = searchQuery ? files.filter(file => {
+                    const query = searchQuery.toLowerCase();
+                    return file.title.toLowerCase().includes(query) ||
+                           file.language.toLowerCase().includes(query) ||
+                           (file.description && file.description.toLowerCase().includes(query)) ||
+                           (file.code && file.code.toLowerCase().includes(query));
+                }) : files;
+                
                 const section = document.createElement('div');
                 section.id = 'storedFilesSection';
                 section.className = 'card';
                 section.innerHTML = `
                     <h2 class="section-title">📚 Your Stored Code Files (${files.length})</h2>
+                    <div class="search-container">
+                        <input type="text" id="codeSearchInput" class="search-input" placeholder="🔍 Search by title, language, description, or code..." value="${searchQuery}">
+                        <button class="search-button" onclick="searchCodes()">🔍 Search</button>
+                        <button class="clear-search" onclick="clearSearch()" ${searchQuery ? '' : 'style="display: none;"'}>✕ Clear</button>
+                    </div>
+                    ${searchQuery ? `<div class="search-results-info">Found ${filteredFiles.length} result${filteredFiles.length !== 1 ? 's' : ''} for "${searchQuery}"</div>` : ''}
                     <div class="stored-files" id="storedFilesList"></div>
                 `;
                 
@@ -1519,36 +1611,62 @@ cd codes_storer_website</div>
                 const featuresCard = document.querySelector('.card');
                 featuresCard.parentNode.insertBefore(section, featuresCard.nextSibling);
                 
+                // Add Enter key listener to search input
+                const searchInput = document.getElementById('codeSearchInput');
+                if (searchInput) {
+                    searchInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            searchCodes();
+                        }
+                    });
+                }
+                
                 // Populate files
                 const filesList = document.getElementById('storedFilesList');
-                files.reverse().forEach(file => {
-                    const fileCard = document.createElement('div');
-                    fileCard.className = 'stored-file-card';
-                    fileCard.onclick = () => openViewModal(file.id);
-                    
-                    const languageEmoji = {
-                        'python': '🐍',
-                        'java': '☕',
-                        'c': '©️',
-                        'cpp': '⚙️',
-                        'javascript': '📜',
-                        'typescript': '🔷',
-                        'react': '⚛️',
-                        'html': '🌐'
-                    };
-                    
-                    fileCard.innerHTML = `
-                        <div class="stored-file-title">${languageEmoji[file.language] || '📄'} ${file.title}</div>
-                        <div class="stored-file-meta">
-                            ${file.language.toUpperCase()} | 
-                            ${new Date(file.created).toLocaleDateString()} | 
-                            ${file.code.split('\n').length} lines
-                        </div>
-                    `;
-                    
-                    filesList.appendChild(fileCard);
-                });
+                if (filteredFiles.length === 0 && searchQuery) {
+                    filesList.innerHTML = '<div style="text-align: center; padding: 40px; color: #b0b0b0;">No code files found matching your search.</div>';
+                } else {
+                    filteredFiles.reverse().forEach(file => {
+                        const fileCard = document.createElement('div');
+                        fileCard.className = 'stored-file-card';
+                        fileCard.onclick = () => openViewModal(file.id);
+                        
+                        const languageEmoji = {
+                            'python': '🐍',
+                            'java': '☕',
+                            'c': '©️',
+                            'cpp': '⚙️',
+                            'javascript': '📜',
+                            'typescript': '🔷',
+                            'react': '⚛️',
+                            'html': '🌐'
+                        };
+                        
+                        fileCard.innerHTML = `
+                            <div class="stored-file-title">${languageEmoji[file.language] || '📄'} ${file.title}</div>
+                            <div class="stored-file-meta">
+                                ${file.language.toUpperCase()} | 
+                                ${new Date(file.created).toLocaleDateString()} | 
+                                ${file.code.split('\n').length} lines
+                            </div>
+                        `;
+                        
+                        filesList.appendChild(fileCard);
+                    });
+                }
             }
+        }
+        
+        // Search codes function
+        function searchCodes() {
+            const searchInput = document.getElementById('codeSearchInput');
+            const searchQuery = searchInput ? searchInput.value.trim() : '';
+            loadStoredFiles(searchQuery);
+        }
+        
+        // Clear search function
+        function clearSearch() {
+            loadStoredFiles('');
         }
         
         // Copy code function
