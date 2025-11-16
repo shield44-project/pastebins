@@ -1397,21 +1397,24 @@ cd codes_storer_website</div>
         // Edit file function
         function editCurrentFile() {
             if (currentViewingFile) {
+                // Store reference before closing modal
+                const fileToEdit = currentViewingFile;
+                
                 // Close view modal
                 closeViewModal();
                 
                 // Open upload modal with pre-filled data
                 document.getElementById('uploadModal').classList.add('active');
-                document.getElementById('language').value = currentViewingFile.language;
-                document.getElementById('title').value = currentViewingFile.title;
-                document.getElementById('description').value = currentViewingFile.description || '';
-                document.getElementById('code').value = currentViewingFile.code;
+                document.getElementById('language').value = fileToEdit.language;
+                document.getElementById('title').value = fileToEdit.title;
+                document.getElementById('description').value = fileToEdit.description || '';
+                document.getElementById('code').value = fileToEdit.code;
                 
                 // Switch to paste mode
                 switchUploadMethod('paste');
                 
                 // Store the current file ID for updating
-                document.getElementById('uploadForm').dataset.editingId = currentViewingFile.id;
+                document.getElementById('uploadForm').dataset.editingId = fileToEdit.id;
             }
         }
         
