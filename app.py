@@ -562,6 +562,48 @@ def decrypt_code(language, code_id):
     except Exception as e:
         return jsonify({'error': 'Decryption failed. Wrong password or corrupted file.'}), 403
 
+@app.route('/delete/<language>/<int:code_id>', methods=['POST', 'DELETE'])
+def delete_code(language, code_id):
+    """Delete a code file"""
+    if language not in LANGUAGES:
+        return jsonify({'error': 'Invalid language'}), 404
+    
+    metadata = load_code_metadata(language)
+    if code_id >= len(metadata):
+        return jsonify({'error': 'Code not found'}), 404
+    
+    code_info = metadata[code_id]
+    
+    try:
+        # Delete the file
+        code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+        if os.path.exists(code_path):
+            os.remove(code_path)
+        
+        # Delete encrypted file if it exists
+        if code_info.get('encrypted', False):
+            enc_path = code_path + '.enc'
+            if os.path.exists(enc_path):
+                os.remove(enc_path)
+        
+        # Remove from metadata
+        metadata.pop(code_id)
+        save_code_metadata(language, metadata)
+        
+        # Commit to GitHub if configured
+        if GITHUB_ENABLED and GITHUB_TOKEN:
+            try:
+                commit_metadata_to_github(language, metadata)
+                app.logger.info(f"Deleted file from GitHub: {code_info['filename']}")
+            except Exception as e:
+                app.logger.warning(f"File deleted locally but GitHub sync failed: {str(e)}")
+        
+        return jsonify({'success': True, 'message': 'Code deleted successfully'})
+    
+    except Exception as e:
+        app.logger.error(f"Failed to delete code: {str(e)}")
+        return jsonify({'error': 'Failed to delete code'}), 500
+
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_code():
     """Upload a new code file"""
