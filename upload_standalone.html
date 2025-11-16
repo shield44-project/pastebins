@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Code - NeonBin</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+            color: #00ff00;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+            color: #00ff00;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #b0b0b0;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(15, 15, 25, 0.85);
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 15px 50px rgba(0, 255, 0, 0.1);
+            padding: 40px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #00ff00;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="file"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(0, 255, 0, 0.3);
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            background: rgba(0, 0, 0, 0.5);
+            color: #00ff00;
+        }
+
+        .form-group textarea {
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 200px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .btn {
+            padding: 15px 35px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00ff00, #00aa00);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4);
+            border: 1px solid #00ff00;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #00ff00, #00cc00);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 0, 0.6);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 255, 0, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            border: 1px solid rgba(0, 255, 0, 0.3);
+        }
+
+        .alert-error {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff5555;
+            border: 1px solid rgba(255, 0, 0, 0.3);
+        }
+
+        .alert-info {
+            background: rgba(0, 150, 255, 0.1);
+            color: #5599ff;
+            border: 1px solid rgba(0, 150, 255, 0.3);
+        }
+
+        .help-text {
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .file-info {
+            background: rgba(0, 255, 0, 0.05);
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            color: #00ff00;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #00ff00;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        }
+
+        #uploadProgress {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 255, 0, 0.1);
+            border-top: 4px solid #00ff00;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Home</a>
+        
+        <header>
+            <h1>📤 Upload Code</h1>
+            <p class="subtitle">Upload your code files with automatic organization and GitHub integration</p>
+        </header>
+
+        <div class="card">
+            <div id="alertContainer"></div>
+
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label for="title">Title *</label>
+                    <input type="text" id="title" name="title" placeholder="e.g., Calculate Factorial" required>
+                    <p class="help-text">A descriptive title for your code file</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description (Optional)</label>
+                    <input type="text" id="description" name="description" placeholder="Brief description of what this code does">
+                </div>
+
+                <div class="form-group">
+                    <label>Upload Method</label>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-secondary" onclick="switchMethod('paste')" id="pasteBtn">
+                            📝 Paste Code
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="switchMethod('file')" id="fileBtn">
+                            📁 Upload File
+                        </button>
+                    </div>
+                </div>
+
+                <div id="pasteArea">
+                    <div class="form-group">
+                        <label for="language">Language *</label>
+                        <select id="language" name="language" required>
+                            <option value="">Select Language</option>
+                            <option value="python">🐍 Python (.py)</option>
+                            <option value="java">☕ Java (.java)</option>
+                            <option value="c">©️ C (.c)</option>
+                            <option value="cpp">⚙️ C++ (.cpp)</option>
+                            <option value="javascript">📜 JavaScript (.js)</option>
+                            <option value="typescript">🔷 TypeScript (.ts)</option>
+                            <option value="html">🌐 HTML (.html)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="code">Code *</label>
+                        <textarea id="code" name="code" placeholder="Paste your code here..." required></textarea>
+                    </div>
+                </div>
+
+                <div id="fileArea" style="display: none;">
+                    <div class="form-group">
+                        <label for="file">Select Code File *</label>
+                        <input type="file" id="file" name="file" accept=".py,.java,.c,.cpp,.js,.ts,.html,.txt">
+                        <p class="help-text">The file extension will automatically determine the language</p>
+                        <div id="fileInfo" class="file-info" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">📤 Upload Code</button>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 Reset</button>
+                    <a href="index.html" class="btn btn-secondary">❌ Cancel</a>
+                </div>
+
+                <div id="uploadProgress">
+                    <div class="spinner"></div>
+                    <p>Uploading and processing...</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let uploadMethod = 'paste';
+
+        // Language to extension mapping
+        const languageExtensions = {
+            'python': '.py',
+            'java': '.java',
+            'c': '.c',
+            'cpp': '.cpp',
+            'javascript': '.js',
+            'typescript': '.ts',
+            'html': '.html'
+        };
+
+        // Extension to language mapping
+        const extensionToLanguage = {
+            '.py': 'python',
+            '.java': 'java',
+            '.c': 'c',
+            '.cpp': 'cpp',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.html': 'html',
+            '.txt': null // Will need to be manually selected
+        };
+
+        function switchMethod(method) {
+            uploadMethod = method;
+            const pasteArea = document.getElementById('pasteArea');
+            const fileArea = document.getElementById('fileArea');
+            const pasteBtn = document.getElementById('pasteBtn');
+            const fileBtn = document.getElementById('fileBtn');
+            const codeField = document.getElementById('code');
+
+            if (method === 'paste') {
+                pasteArea.style.display = 'block';
+                fileArea.style.display = 'none';
+                pasteBtn.style.background = '#00ff00';
+                pasteBtn.style.color = '#000';
+                fileBtn.style.background = 'rgba(0, 255, 0, 0.1)';
+                fileBtn.style.color = '#00ff00';
+                codeField.required = true;
+            } else {
+                pasteArea.style.display = 'none';
+                fileArea.style.display = 'block';
+                fileBtn.style.background = '#00ff00';
+                fileBtn.style.color = '#000';
+                pasteBtn.style.background = 'rgba(0, 255, 0, 0.1)';
+                pasteBtn.style.color = '#00ff00';
+                codeField.required = false;
+            }
+        }
+
+        // Handle file selection
+        document.getElementById('file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const fileInfo = document.getElementById('fileInfo');
+                const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                const lang = extensionToLanguage[ext];
+                
+                let info = `📄 <strong>${file.name}</strong><br>`;
+                info += `📏 Size: ${formatFileSize(file.size)}<br>`;
+                
+                if (lang) {
+                    info += `🔤 Detected language: <strong>${lang}</strong>`;
+                } else {
+                    info += `⚠️ Unknown file type. Please manually select language in paste mode.`;
+                }
+                
+                fileInfo.innerHTML = info;
+                fileInfo.style.display = 'block';
+            }
+        });
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertClass = type === 'success' ? 'alert-success' : type === 'info' ? 'alert-info' : 'alert-error';
+            alertContainer.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertContainer.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('uploadForm').reset();
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('alertContainer').innerHTML = '';
+            switchMethod('paste');
+        }
+
+        // Handle form submission
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const uploadProgress = document.getElementById('uploadProgress');
+            
+            // Disable submit button and show progress
+            submitBtn.disabled = true;
+            uploadProgress.style.display = 'block';
+            
+            try {
+                let code, language, filename;
+                const title = document.getElementById('title').value.trim();
+                const description = document.getElementById('description').value.trim();
+
+                if (uploadMethod === 'paste') {
+                    // Get code from textarea
+                    code = document.getElementById('code').value;
+                    language = document.getElementById('language').value;
+                    
+                    if (!language) {
+                        throw new Error('Please select a language');
+                    }
+                    
+                    // Generate filename from title
+                    const safeName = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                    filename = safeName + languageExtensions[language];
+                } else {
+                    // Get code from file
+                    const fileInput = document.getElementById('file');
+                    const file = fileInput.files[0];
+                    
+                    if (!file) {
+                        throw new Error('Please select a file');
+                    }
+                    
+                    // Read file content
+                    code = await readFileContent(file);
+                    filename = file.name;
+                    
+                    // Detect language from extension
+                    const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+                    language = extensionToLanguage[ext];
+                    
+                    if (!language) {
+                        throw new Error('Unsupported file type: ' + ext);
+                    }
+                }
+
+                // Prepare the data for GitHub
+                const result = await uploadToGitHub(title, description, code, language, filename);
+                
+                showAlert(`✅ Success! Code uploaded to ${language} directory and committed to GitHub.<br>File: ${filename}`, 'success');
+                
+                // Reset form after successful upload
+                setTimeout(() => {
+                    resetForm();
+                }, 2000);
+                
+            } catch (error) {
+                showAlert(`❌ Error: ${error.message}`, 'error');
+                console.error('Upload error:', error);
+            } finally {
+                // Re-enable submit button and hide progress
+                submitBtn.disabled = false;
+                uploadProgress.style.display = 'none';
+            }
+        });
+
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error('Failed to read file'));
+                reader.readAsText(file);
+            });
+        }
+
+        async function uploadToGitHub(title, description, code, language, filename) {
+            // Call the backend API to upload the code
+            const response = await fetch('/api/upload-standalone', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title,
+                    description,
+                    code,
+                    language,
+                    filename
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Upload failed');
+            }
+
+            const result = await response.json();
+            return result;
+        }
+
+        // Initialize
+        switchMethod('paste');
+    </script>
+</body>
+</html>
