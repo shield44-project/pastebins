@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "env": {
+    "FLASK_DEBUG": "False",
+    "CODES_DIRECTORY": "/tmp/stored_codes",
+    "GITHUB_REPO": "shield44-project/pastebins",
+    "GITHUB_BRANCH": "main"
+  }
+}

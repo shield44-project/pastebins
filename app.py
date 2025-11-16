@@ -23,10 +23,23 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
+# GitHub integration
+try:
+    from github import Github, GithubException
+    GITHUB_ENABLED = True
+except ImportError:
+    GITHUB_ENABLED = False
+    app.logger.warning("PyGithub not installed. GitHub integration disabled.")
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
-app.config['CODES_DIRECTORY'] = 'stored_codes'
+app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
+
+# GitHub configuration
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+GITHUB_REPO = os.environ.get('GITHUB_REPO', 'shield44-project/pastebins')
+GITHUB_BRANCH = os.environ.get('GITHUB_BRANCH', 'main')
 
 # Password-based encryption utilities
 def derive_key_from_password(password: str, salt: bytes) -> bytes:
@@ -80,6 +93,63 @@ def decrypt_content_with_password(encrypted_data: dict, password: str) -> str:
     plaintext = cipher.decrypt(nonce, ciphertext, None)
     
     return plaintext.decode('utf-8')
+
+# GitHub Integration Functions
+def commit_file_to_github(file_path, file_content, commit_message):
+    """
+    Commit a file to GitHub repository.
+    Returns True if successful, False otherwise.
+    """
+    if not GITHUB_ENABLED or not GITHUB_TOKEN:
+        app.logger.warning("GitHub integration not configured. Skipping commit.")
+        return False
+    
+    try:
+        # Initialize GitHub client
+        g = Github(GITHUB_TOKEN)
+        repo = g.get_repo(GITHUB_REPO)
+        
+        # Try to get existing file
+        try:
+            contents = repo.get_contents(file_path, ref=GITHUB_BRANCH)
+            # File exists, update it
+            repo.update_file(
+                path=file_path,
+                message=commit_message,
+                content=file_content,
+                sha=contents.sha,
+                branch=GITHUB_BRANCH
+            )
+            app.logger.info(f"Updated file in GitHub: {file_path}")
+        except GithubException as e:
+            if e.status == 404:
+                # File doesn't exist, create it
+                repo.create_file(
+                    path=file_path,
+                    message=commit_message,
+                    content=file_content,
+                    branch=GITHUB_BRANCH
+                )
+                app.logger.info(f"Created file in GitHub: {file_path}")
+            else:
+                raise
+        
+        return True
+        
+    except Exception as e:
+        app.logger.error(f"Failed to commit to GitHub: {str(e)}")
+        return False
+
+def commit_metadata_to_github(language, metadata):
+    """
+    Commit metadata file to GitHub repository.
+    Returns True if successful, False otherwise.
+    """
+    metadata_path = f"stored_codes/{language}_metadata.json"
+    metadata_content = json.dumps(metadata, indent=2)
+    commit_message = f"Update {language} metadata via web upload"
+    
+    return commit_file_to_github(metadata_path, metadata_content, commit_message)
 
 def check_compiler_available(compiler):
     """Check if a compiler/interpreter is available in the system."""
@@ -430,10 +500,121 @@ def decrypt_code(language, code_id):
 def upload_code():
     """Upload a new code file"""
     if request.method == 'POST':
+        try:
+            language = request.form.get('language')
+            title = request.form.get('title')
+            description = request.form.get('description', '')
+            code_content = request.form.get('code')
+            encrypt = request.form.get('encrypt') == 'on'
+            password = request.form.get('password', '')
+            is_secret = request.form.get('is_secret') == 'on'
+            
+            if not language or language not in LANGUAGES:
+                return jsonify({'error': 'Invalid language'}), 400
+            
+            if not title or not code_content:
+                return jsonify({'error': 'Title and code are required'}), 400
+            
+            if encrypt and not password:
+                return jsonify({'error': 'Password is required for encryption'}), 400
+            
+            # Validate title to prevent path traversal
+            if '/' in title or '\\' in title or title.startswith('.'):
+                return jsonify({'error': 'Invalid title - cannot contain path separators'}), 400
+            
+            # Create language directory if it doesn't exist
+            lang_dir = os.path.join(app.config['CODES_DIRECTORY'], language)
+            try:
+                os.makedirs(lang_dir, exist_ok=True)
+            except OSError as e:
+                app.logger.error(f"Failed to create directory {lang_dir}: {str(e)}")
+                return jsonify({'error': 'Failed to create storage directory. The server may have limited write permissions.'}), 500
+            
+            # Load existing metadata
+            metadata = load_code_metadata(language)
+            
+            # Create filename based on title and extension - sanitize for filesystem
+            safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')
+            if not safe_title:
+                safe_title = 'unnamed'
+            filename = f"{safe_title}{LANGUAGES[language]['extension']}"
+            filepath = os.path.join(lang_dir, filename)
+            
+            # Handle encryption if requested
+            encrypted_data = None
+            try:
+                if encrypt:
+                    encrypted_data = encrypt_content_with_password(code_content, password)
+                    # Save encrypted data to file
+                    with open(filepath + '.enc', 'w') as f:
+                        json.dump(encrypted_data, f)
+                else:
+                    # Save the code file normally
+                    with open(filepath, 'w') as f:
+                        f.write(code_content)
+            except PermissionError as e:
+                app.logger.error(f"Permission error saving file {filepath}: {str(e)}")
+                return jsonify({'error': 'Permission denied - cannot write file. The server may have limited write permissions.'}), 500
+            except IOError as e:
+                app.logger.error(f"I/O error saving file {filepath}: {str(e)}")
+                return jsonify({'error': f'Failed to save file: {str(e)}'}), 500
+            
+            # Add to metadata
+            code_info = {
+                'title': title,
+                'description': description,
+                'filename': filename,
+                'created_at': datetime.now().isoformat(),
+                'encrypted': encrypt,
+                'is_secret': is_secret
+            }
+            metadata.append(code_info)
+            
+            try:
+                save_code_metadata(language, metadata)
+            except Exception as e:
+                app.logger.error(f"Failed to save metadata: {str(e)}")
+                return jsonify({'error': 'File saved but failed to save metadata. Please try again.'}), 500
+            
+            # Commit to GitHub if configured
+            if GITHUB_ENABLED and GITHUB_TOKEN:
+                try:
+                    # Commit the code file
+                    github_file_path = f"stored_codes/{language}/{filename}"
+                    if encrypt:
+                        github_file_path += '.enc'
+                        file_content_to_commit = json.dumps(encrypted_data, indent=2)
+                    else:
+                        file_content_to_commit = code_content
+                    
+                    commit_message = f"Add {language} file: {title} via web upload"
+                    commit_file_to_github(github_file_path, file_content_to_commit, commit_message)
+                    
+                    # Commit the metadata
+                    commit_metadata_to_github(language, metadata)
+                    
+                    app.logger.info(f"Successfully committed to GitHub: {github_file_path}")
+                except Exception as e:
+                    app.logger.warning(f"File saved locally but GitHub commit failed: {str(e)}")
+                    # Don't fail the upload if GitHub commit fails
+            
+            return redirect(url_for('category', language=language))
+        
+        except Exception as e:
+            app.logger.error(f"Unexpected error in upload_code: {str(e)}")
+            return jsonify({'error': 'An unexpected error occurred during code upload. Please try again.'}), 500
+    
+    return render_template('upload.html', languages=LANGUAGES)
+
+@app.route('/upload-files', methods=['POST'])
+def upload_files():
+    """Upload multiple code files"""
+    try:
+        if 'files' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
+        
+        files = request.files.getlist('files')
         language = request.form.get('language')
-        title = request.form.get('title')
-        description = request.form.get('description', '')
-        code_content = request.form.get('code')
         encrypt = request.form.get('encrypt') == 'on'
         password = request.form.get('password', '')
         is_secret = request.form.get('is_secret') == 'on'
@@ -441,148 +622,133 @@ def upload_code():
         if not language or language not in LANGUAGES:
             return jsonify({'error': 'Invalid language'}), 400
         
-        if not title or not code_content:
-            return jsonify({'error': 'Title and code are required'}), 400
+        if not files or all(f.filename == '' for f in files):
+            return jsonify({'error': 'No files selected'}), 400
         
         if encrypt and not password:
             return jsonify({'error': 'Password is required for encryption'}), 400
         
-        # Validate title to prevent path traversal
-        if '/' in title or '\\' in title or title.startswith('.'):
-            return jsonify({'error': 'Invalid title - cannot contain path separators'}), 400
-        
         # Create language directory if it doesn't exist
         lang_dir = os.path.join(app.config['CODES_DIRECTORY'], language)
-        os.makedirs(lang_dir, exist_ok=True)
+        try:
+            os.makedirs(lang_dir, exist_ok=True)
+        except OSError as e:
+            app.logger.error(f"Failed to create directory {lang_dir}: {str(e)}")
+            return jsonify({'error': 'Failed to create storage directory. The server may have limited write permissions.'}), 500
         
         # Load existing metadata
         metadata = load_code_metadata(language)
         
-        # Create filename based on title and extension - sanitize for filesystem
-        safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')
-        if not safe_title:
-            safe_title = 'unnamed'
-        filename = f"{safe_title}{LANGUAGES[language]['extension']}"
-        filepath = os.path.join(lang_dir, filename)
+        uploaded_count = 0
+        errors = []
+        for file in files:
+            if file and file.filename:
+                # Secure the filename
+                filename = file.filename
+                # Basic validation of filename
+                if not re.match(r'^[\w\-\.]+$', filename):
+                    errors.append(f"{filename}: Invalid filename - contains invalid characters")
+                    continue  # Skip invalid filenames
+                
+                # Check file extension matches language
+                expected_ext = LANGUAGES[language]['extension']
+                if not filename.endswith(expected_ext):
+                    errors.append(f"{filename}: Wrong file extension - expected {expected_ext}")
+                    continue  # Skip files with wrong extension
+                
+                filepath = os.path.join(lang_dir, filename)
+                
+                try:
+                    # Handle encryption if requested
+                    if encrypt:
+                        # Read file content
+                        file.seek(0)  # Reset file pointer to the beginning
+                        content = file.read().decode('utf-8')
+                        encrypted_data = encrypt_content_with_password(content, password)
+                        # Save encrypted data
+                        with open(filepath + '.enc', 'w') as f:
+                            json.dump(encrypted_data, f)
+                    else:
+                        # Save the file normally
+                        file.seek(0)  # Reset file pointer to the beginning
+                        file.save(filepath)
+                    
+                    # Add to metadata
+                    title = filename.rsplit('.', 1)[0].replace('_', ' ').title()
+                    code_info = {
+                        'title': title,
+                        'description': f'Uploaded from file: {filename}',
+                        'filename': filename,
+                        'created_at': datetime.now().isoformat(),
+                        'encrypted': encrypt,
+                        'is_secret': is_secret
+                    }
+                    metadata.append(code_info)
+                    uploaded_count += 1
+                    
+                    # Commit to GitHub if configured
+                    if GITHUB_ENABLED and GITHUB_TOKEN:
+                        try:
+                            # Read the file content for GitHub commit
+                            github_file_path = f"stored_codes/{language}/{filename}"
+                            if encrypt:
+                                github_file_path += '.enc'
+                                github_content = json.dumps(encrypted_data, indent=2)
+                            else:
+                                with open(filepath, 'r') as f:
+                                    github_content = f.read()
+                            
+                            commit_message = f"Add {language} file: {filename} via web upload"
+                            commit_file_to_github(github_file_path, github_content, commit_message)
+                            app.logger.info(f"Committed to GitHub: {github_file_path}")
+                        except Exception as e:
+                            app.logger.warning(f"File saved locally but GitHub commit failed for {filename}: {str(e)}")
+                            # Don't fail the upload if GitHub commit fails
+                    
+                except UnicodeDecodeError as e:
+                    errors.append(f"{filename}: File encoding error - must be UTF-8")
+                    app.logger.error(f"Upload error for {filename}: {str(e)}")
+                except PermissionError as e:
+                    errors.append(f"{filename}: Permission denied - cannot write file")
+                    app.logger.error(f"Upload error for {filename}: {str(e)}")
+                except IOError as e:
+                    errors.append(f"{filename}: File I/O error - {str(e)}")
+                    app.logger.error(f"Upload error for {filename}: {str(e)}")
+                except Exception as e:
+                    errors.append(f"{filename}: {str(e)}")
+                    app.logger.error(f"Upload error for {filename}: {str(e)}")
         
-        # Handle encryption if requested
-        encrypted_data = None
-        if encrypt:
-            encrypted_data = encrypt_content_with_password(code_content, password)
-            # Save encrypted data to file
-            with open(filepath + '.enc', 'w') as f:
-                json.dump(encrypted_data, f)
-        else:
-            # Save the code file normally
-            with open(filepath, 'w') as f:
-                f.write(code_content)
+        # Save updated metadata
+        if uploaded_count > 0:
+            try:
+                save_code_metadata(language, metadata)
+                
+                # Commit metadata to GitHub if configured
+                if GITHUB_ENABLED and GITHUB_TOKEN:
+                    try:
+                        commit_metadata_to_github(language, metadata)
+                        app.logger.info(f"Committed metadata to GitHub for {language}")
+                    except Exception as e:
+                        app.logger.warning(f"Metadata saved locally but GitHub commit failed: {str(e)}")
+                        # Don't fail the upload if GitHub commit fails
+                        
+            except Exception as e:
+                app.logger.error(f"Failed to save metadata: {str(e)}")
+                return jsonify({'error': 'Files uploaded but failed to save metadata. Please try again.'}), 500
         
-        # Add to metadata
-        code_info = {
-            'title': title,
-            'description': description,
-            'filename': filename,
-            'created_at': datetime.now().isoformat(),
-            'encrypted': encrypt,
-            'is_secret': is_secret
-        }
-        metadata.append(code_info)
-        save_code_metadata(language, metadata)
+        if uploaded_count == 0:
+            error_msg = 'No valid files were uploaded'
+            if errors:
+                error_msg += '. Errors: ' + '; '.join(errors[:5])  # Limit to first 5 errors
+                if len(errors) > 5:
+                    error_msg += f' (and {len(errors) - 5} more errors)'
+            return jsonify({'error': error_msg}), 400
         
         return redirect(url_for('category', language=language))
     
-    return render_template('upload.html', languages=LANGUAGES)
-
-@app.route('/upload-files', methods=['POST'])
-def upload_files():
-    """Upload multiple code files"""
-    if 'files' not in request.files:
-        return jsonify({'error': 'No files provided'}), 400
-    
-    files = request.files.getlist('files')
-    language = request.form.get('language')
-    encrypt = request.form.get('encrypt') == 'on'
-    password = request.form.get('password', '')
-    is_secret = request.form.get('is_secret') == 'on'
-    
-    if not language or language not in LANGUAGES:
-        return jsonify({'error': 'Invalid language'}), 400
-    
-    if not files or all(f.filename == '' for f in files):
-        return jsonify({'error': 'No files selected'}), 400
-    
-    if encrypt and not password:
-        return jsonify({'error': 'Password is required for encryption'}), 400
-    
-    # Create language directory if it doesn't exist
-    lang_dir = os.path.join(app.config['CODES_DIRECTORY'], language)
-    os.makedirs(lang_dir, exist_ok=True)
-    
-    # Load existing metadata
-    metadata = load_code_metadata(language)
-    
-    uploaded_count = 0
-    errors = []
-    for file in files:
-        if file and file.filename:
-            # Secure the filename
-            filename = file.filename
-            # Basic validation of filename
-            if not re.match(r'^[\w\-\.]+$', filename):
-                continue  # Skip invalid filenames
-            
-            # Check file extension matches language
-            expected_ext = LANGUAGES[language]['extension']
-            if not filename.endswith(expected_ext):
-                continue  # Skip files with wrong extension
-            
-            filepath = os.path.join(lang_dir, filename)
-            
-            try:
-                # Handle encryption if requested
-                if encrypt:
-                    # Read file content
-                    file.seek(0)  # Reset file pointer to the beginning
-                    content = file.read().decode('utf-8')
-                    encrypted_data = encrypt_content_with_password(content, password)
-                    # Save encrypted data
-                    with open(filepath + '.enc', 'w') as f:
-                        json.dump(encrypted_data, f)
-                else:
-                    # Save the file normally
-                    file.seek(0)  # Reset file pointer to the beginning
-                    file.save(filepath)
-                
-                # Add to metadata
-                title = filename.rsplit('.', 1)[0].replace('_', ' ').title()
-                code_info = {
-                    'title': title,
-                    'description': f'Uploaded from file: {filename}',
-                    'filename': filename,
-                    'created_at': datetime.now().isoformat(),
-                    'encrypted': encrypt,
-                    'is_secret': is_secret
-                }
-                metadata.append(code_info)
-                uploaded_count += 1
-            except UnicodeDecodeError as e:
-                errors.append(f"{filename}: File encoding error - must be UTF-8")
-                app.logger.error(f"Upload error for {filename}: {str(e)}")
-            except Exception as e:
-                errors.append(f"{filename}: {str(e)}")
-                app.logger.error(f"Upload error for {filename}: {str(e)}")
-    
-    # Save updated metadata
-    if uploaded_count > 0:
-        save_code_metadata(language, metadata)
-    
-    if uploaded_count == 0:
-        error_msg = 'No valid files were uploaded'
-        if errors:
-            error_msg += '. Errors: ' + '; '.join(errors)
-        return jsonify({'error': error_msg}), 400
-    
-    return redirect(url_for('category', language=language))
+    except Exception as e:
+        app.logger.error(f"Unexpected error in upload_files: {str(e)}")
+        return jsonify({'error': 'An unexpected error occurred during file upload. Please try again.'}), 500
 
 @app.route('/render/<language>/<int:code_id>')
 def render_html(language, code_id):
@@ -812,6 +978,24 @@ def create_folder(language):
         # Log the error but don't expose stack trace to user
         app.logger.error(f'Failed to create folder for {language}: {e}')
         return jsonify({'error': 'Failed to create folder'}), 500
+
+# Error handlers
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """Handle file upload that exceeds size limit"""
+    return jsonify({
+        'error': 'File too large. Maximum upload size is 16MB.',
+        'max_size': '16MB'
+    }), 413
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    """Handle internal server errors"""
+    app.logger.error(f'Internal server error: {error}')
+    return jsonify({
+        'error': 'An internal server error occurred. Please try again or contact support.',
+        'message': 'Internal Server Error'
+    }), 500
 
 if __name__ == '__main__':
     # WARNING: debug=True is for development only. 
