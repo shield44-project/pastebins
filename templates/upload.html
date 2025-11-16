@@ -76,6 +76,15 @@
             </label>
             <p class="help-text">Secret files will only be visible in the "Secret Folders" section.</p>
         </div>
+
+        <!-- GitHub Auto-Commit Option -->
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="auto_commit_github" id="auto_commit_github">
+                📂 Auto-commit to GitHub
+            </label>
+            <p class="help-text">Automatically commit and push this file to the GitHub repository (requires GitHub integration to be configured).</p>
+        </div>
         {% endif %}
 
         <div class="form-actions">
@@ -127,6 +136,15 @@
                 🔐 Mark as secret (hidden from public view)
             </label>
             <p class="help-text">Secret files will only be visible in the "Secret Folders" section.</p>
+        </div>
+
+        <!-- GitHub Auto-Commit Option -->
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="auto_commit_github" id="auto_commit_github_files">
+                📂 Auto-commit to GitHub
+            </label>
+            <p class="help-text">Automatically commit and push these files to the GitHub repository (requires GitHub integration to be configured).</p>
         </div>
 
         <div class="form-actions">

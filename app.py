@@ -595,7 +595,9 @@ def view_code(language, code_id):
                              language=language, 
                              code_id=code_id,
                              code_info=code_info, 
-                             code_content=code_content)
+                             code_content=code_content,
+                             github_repo=GITHUB_REPO,
+                             github_branch=GITHUB_BRANCH)
     
     # For React/JSX files, use HTML viewer since they need to be rendered
     if language == 'react':
@@ -603,13 +605,17 @@ def view_code(language, code_id):
                              language=language, 
                              code_id=code_id,
                              code_info=code_info, 
-                             code_content=code_content)
+                             code_content=code_content,
+                             github_repo=GITHUB_REPO,
+                             github_branch=GITHUB_BRANCH)
     
     return render_template('view_code.html', 
                          language=language, 
                          code_id=code_id,
                          code_info=code_info, 
-                         code_content=code_content)
+                         code_content=code_content,
+                         github_repo=GITHUB_REPO,
+                         github_branch=GITHUB_BRANCH)
 
 @app.route('/decrypt/<language>/<int:code_id>', methods=['POST'])
 def decrypt_code(language, code_id):
@@ -940,6 +946,7 @@ def upload_code():
             encrypt = request.form.get('encrypt') == 'on'
             password = request.form.get('password', '')
             is_secret = request.form.get('is_secret') == 'on'
+            auto_commit_github = request.form.get('auto_commit_github') == 'on'
             
             if not language or language not in LANGUAGES:
                 return jsonify({'error': 'Invalid language'}), 400
@@ -1090,8 +1097,8 @@ def upload_code():
                 app.logger.error(f"Failed to save metadata: {str(e)}")
                 return jsonify({'error': 'File saved but failed to save metadata. Please try again.'}), 500
             
-            # Commit to GitHub if configured
-            if GITHUB_ENABLED and GITHUB_TOKEN:
+            # Commit to GitHub if configured AND user opted-in
+            if auto_commit_github and GITHUB_ENABLED and GITHUB_TOKEN:
                 try:
                     # Commit the code file
                     github_file_path = f"stored_codes/{language}/{filename}"
@@ -1108,6 +1115,12 @@ def upload_code():
                     commit_metadata_to_github(language, metadata)
                     
                     app.logger.info(f"Successfully committed to GitHub: {github_file_path}")
+                    
+                    # Mark in metadata that it was committed to GitHub
+                    code_info['github_committed'] = True
+                    # Re-save metadata with github_committed flag
+                    metadata[-1] = code_info
+                    save_code_metadata(language, metadata)
                 except Exception as e:
                     app.logger.warning(f"File saved locally but GitHub commit failed: {str(e)}")
                     # Don't fail the upload if GitHub commit fails
@@ -1132,6 +1145,7 @@ def upload_files():
         encrypt = request.form.get('encrypt') == 'on'
         password = request.form.get('password', '')
         is_secret = request.form.get('is_secret') == 'on'
+        auto_commit_github = request.form.get('auto_commit_github') == 'on'
         
         if not language or language not in LANGUAGES:
             return jsonify({'error': 'Invalid language'}), 400
@@ -1197,11 +1211,9 @@ def upload_files():
                         'encrypted': encrypt,
                         'is_secret': is_secret
                     }
-                    metadata.append(code_info)
-                    uploaded_count += 1
                     
-                    # Commit to GitHub if configured
-                    if GITHUB_ENABLED and GITHUB_TOKEN:
+                    # Commit to GitHub if configured AND user opted-in
+                    if auto_commit_github and GITHUB_ENABLED and GITHUB_TOKEN:
                         try:
                             # Read the file content for GitHub commit
                             github_file_path = f"stored_codes/{language}/{filename}"
@@ -1215,9 +1227,15 @@ def upload_files():
                             commit_message = f"Add {language} file: {filename} via web upload"
                             commit_file_to_github(github_file_path, github_content, commit_message)
                             app.logger.info(f"Committed to GitHub: {github_file_path}")
+                            
+                            # Mark in metadata that it was committed to GitHub
+                            code_info['github_committed'] = True
                         except Exception as e:
                             app.logger.warning(f"File saved locally but GitHub commit failed for {filename}: {str(e)}")
                             # Don't fail the upload if GitHub commit fails
+                    
+                    metadata.append(code_info)
+                    uploaded_count += 1
                     
                 except UnicodeDecodeError as e:
                     errors.append(f"{filename}: File encoding error - must be UTF-8")
@@ -1237,8 +1255,8 @@ def upload_files():
             try:
                 save_code_metadata(language, metadata)
                 
-                # Commit metadata to GitHub if configured
-                if GITHUB_ENABLED and GITHUB_TOKEN:
+                # Commit metadata to GitHub if configured AND user opted-in
+                if auto_commit_github and GITHUB_ENABLED and GITHUB_TOKEN:
                     try:
                         commit_metadata_to_github(language, metadata)
                         app.logger.info(f"Committed metadata to GitHub for {language}")

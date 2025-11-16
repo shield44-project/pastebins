@@ -70,6 +70,9 @@
         </div>
         <div style="display: flex; gap: 10px;">
             <a href="{{ url_for('category', language='html') }}" class="btn btn-secondary">Back to HTML</a>
+            {% if github_repo and code_info.filename %}
+            <a href="https://github.com/{{ github_repo }}/blob/{{ github_branch }}/stored_codes/{{ language }}/{{ code_info.filename }}" class="btn btn-secondary" target="_blank">📂 View on GitHub</a>
+            {% endif %}
             <a href="{{ url_for('edit_code', language=language, code_id=code_id) }}" class="btn btn-primary">✏️ Edit</a>
             <button id="delete-code" class="btn btn-danger">🗑️ Delete</button>
         </div>
