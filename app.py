@@ -23,10 +23,23 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
+# GitHub integration
+try:
+    from github import Github, GithubException
+    GITHUB_ENABLED = True
+except ImportError:
+    GITHUB_ENABLED = False
+    app.logger.warning("PyGithub not installed. GitHub integration disabled.")
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
+
+# GitHub configuration
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+GITHUB_REPO = os.environ.get('GITHUB_REPO', 'shield44-project/pastebins')
+GITHUB_BRANCH = os.environ.get('GITHUB_BRANCH', 'main')
 
 # Password-based encryption utilities
 def derive_key_from_password(password: str, salt: bytes) -> bytes:
@@ -80,6 +93,63 @@ def decrypt_content_with_password(encrypted_data: dict, password: str) -> str:
     plaintext = cipher.decrypt(nonce, ciphertext, None)
     
     return plaintext.decode('utf-8')
+
+# GitHub Integration Functions
+def commit_file_to_github(file_path, file_content, commit_message):
+    """
+    Commit a file to GitHub repository.
+    Returns True if successful, False otherwise.
+    """
+    if not GITHUB_ENABLED or not GITHUB_TOKEN:
+        app.logger.warning("GitHub integration not configured. Skipping commit.")
+        return False
+    
+    try:
+        # Initialize GitHub client
+        g = Github(GITHUB_TOKEN)
+        repo = g.get_repo(GITHUB_REPO)
+        
+        # Try to get existing file
+        try:
+            contents = repo.get_contents(file_path, ref=GITHUB_BRANCH)
+            # File exists, update it
+            repo.update_file(
+                path=file_path,
+                message=commit_message,
+                content=file_content,
+                sha=contents.sha,
+                branch=GITHUB_BRANCH
+            )
+            app.logger.info(f"Updated file in GitHub: {file_path}")
+        except GithubException as e:
+            if e.status == 404:
+                # File doesn't exist, create it
+                repo.create_file(
+                    path=file_path,
+                    message=commit_message,
+                    content=file_content,
+                    branch=GITHUB_BRANCH
+                )
+                app.logger.info(f"Created file in GitHub: {file_path}")
+            else:
+                raise
+        
+        return True
+        
+    except Exception as e:
+        app.logger.error(f"Failed to commit to GitHub: {str(e)}")
+        return False
+
+def commit_metadata_to_github(language, metadata):
+    """
+    Commit metadata file to GitHub repository.
+    Returns True if successful, False otherwise.
+    """
+    metadata_path = f"stored_codes/{language}_metadata.json"
+    metadata_content = json.dumps(metadata, indent=2)
+    commit_message = f"Update {language} metadata via web upload"
+    
+    return commit_file_to_github(metadata_path, metadata_content, commit_message)
 
 def check_compiler_available(compiler):
     """Check if a compiler/interpreter is available in the system."""
@@ -506,6 +576,28 @@ def upload_code():
                 app.logger.error(f"Failed to save metadata: {str(e)}")
                 return jsonify({'error': 'File saved but failed to save metadata. Please try again.'}), 500
             
+            # Commit to GitHub if configured
+            if GITHUB_ENABLED and GITHUB_TOKEN:
+                try:
+                    # Commit the code file
+                    github_file_path = f"stored_codes/{language}/{filename}"
+                    if encrypt:
+                        github_file_path += '.enc'
+                        file_content_to_commit = json.dumps(encrypted_data, indent=2)
+                    else:
+                        file_content_to_commit = code_content
+                    
+                    commit_message = f"Add {language} file: {title} via web upload"
+                    commit_file_to_github(github_file_path, file_content_to_commit, commit_message)
+                    
+                    # Commit the metadata
+                    commit_metadata_to_github(language, metadata)
+                    
+                    app.logger.info(f"Successfully committed to GitHub: {github_file_path}")
+                except Exception as e:
+                    app.logger.warning(f"File saved locally but GitHub commit failed: {str(e)}")
+                    # Don't fail the upload if GitHub commit fails
+            
             return redirect(url_for('category', language=language))
         
         except Exception as e:
@@ -593,6 +685,26 @@ def upload_files():
                     }
                     metadata.append(code_info)
                     uploaded_count += 1
+                    
+                    # Commit to GitHub if configured
+                    if GITHUB_ENABLED and GITHUB_TOKEN:
+                        try:
+                            # Read the file content for GitHub commit
+                            github_file_path = f"stored_codes/{language}/{filename}"
+                            if encrypt:
+                                github_file_path += '.enc'
+                                github_content = json.dumps(encrypted_data, indent=2)
+                            else:
+                                with open(filepath, 'r') as f:
+                                    github_content = f.read()
+                            
+                            commit_message = f"Add {language} file: {filename} via web upload"
+                            commit_file_to_github(github_file_path, github_content, commit_message)
+                            app.logger.info(f"Committed to GitHub: {github_file_path}")
+                        except Exception as e:
+                            app.logger.warning(f"File saved locally but GitHub commit failed for {filename}: {str(e)}")
+                            # Don't fail the upload if GitHub commit fails
+                    
                 except UnicodeDecodeError as e:
                     errors.append(f"{filename}: File encoding error - must be UTF-8")
                     app.logger.error(f"Upload error for {filename}: {str(e)}")
@@ -610,6 +722,16 @@ def upload_files():
         if uploaded_count > 0:
             try:
                 save_code_metadata(language, metadata)
+                
+                # Commit metadata to GitHub if configured
+                if GITHUB_ENABLED and GITHUB_TOKEN:
+                    try:
+                        commit_metadata_to_github(language, metadata)
+                        app.logger.info(f"Committed metadata to GitHub for {language}")
+                    except Exception as e:
+                        app.logger.warning(f"Metadata saved locally but GitHub commit failed: {str(e)}")
+                        # Don't fail the upload if GitHub commit fails
+                        
             except Exception as e:
                 app.logger.error(f"Failed to save metadata: {str(e)}")
                 return jsonify({'error': 'Files uploaded but failed to save metadata. Please try again.'}), 500

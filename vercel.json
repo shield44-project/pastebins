@@ -14,6 +14,8 @@
   ],
   "env": {
     "FLASK_DEBUG": "False",
-    "CODES_DIRECTORY": "/tmp/stored_codes"
+    "CODES_DIRECTORY": "/tmp/stored_codes",
+    "GITHUB_REPO": "shield44-project/pastebins",
+    "GITHUB_BRANCH": "main"
   }
 }

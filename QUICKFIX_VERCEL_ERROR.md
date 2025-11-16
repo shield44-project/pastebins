@@ -2,39 +2,44 @@
 
 If you're experiencing "Internal Server Error" when uploading files on Vercel, this has been fixed! 🎉
 
-## ✅ Latest Fix (Critical)
+## ✅ Latest Update: GitHub Integration
+
+**NEW**: Files uploaded via the website can now be automatically committed to your GitHub repository!
+
+This solves the ephemeral filesystem problem on Vercel - uploaded files are now permanently stored in your GitHub repo.
+
+### Setup GitHub Integration (Recommended)
+
+1. Create a GitHub Personal Access Token (with `repo` scope)
+2. Add it to Vercel environment variables as `GITHUB_TOKEN`
+3. Files uploaded via website will auto-commit to your repo
+
+See [GITHUB_INTEGRATION_SETUP.md](GITHUB_INTEGRATION_SETUP.md) for detailed setup instructions.
+
+## ✅ Previous Fix: Environment Variable Support
 
 **Problem**: The app was not reading the `CODES_DIRECTORY` environment variable, causing read-only filesystem errors.
 
 **Solution**: Updated `app.py` to read the environment variable. The app now correctly uses `/tmp/stored_codes` on Vercel.
 
-## What Was Fixed
+---
 
-1. **Environment Variable Support**: The application now reads `CODES_DIRECTORY` from environment variables
-2. **Error Handling**: Comprehensive error messages instead of generic 500 errors
-3. **Vercel Configuration**: Included `vercel.json` automatically configures `/tmp` storage
+## How File Upload Works Now
 
-## What You Need to Know
+### With GitHub Integration (Recommended):
+1. File is uploaded via website
+2. Saved locally to `/tmp/stored_codes/`
+3. **Automatically committed to GitHub repository** ← NEW!
+4. Files persist permanently across deployments ✅
 
-### For Vercel Deployments
+### Without GitHub Integration:
+1. File is uploaded via website
+2. Saved locally to `/tmp/stored_codes/`
+3. Files are temporary - lost on function restart ⚠️
 
-Vercel uses a **serverless environment** with an ephemeral (temporary) filesystem. This means:
+---
 
-1. **Files uploaded won't persist** between function invocations
-2. You can only write to `/tmp` directory (up to 500MB, temporary)
-3. For production, you need external storage (S3, Vercel Blob, etc.)
-
-### Quick Setup for Vercel
-
-The repository now includes a `vercel.json` configuration file that sets up:
-- Flask in production mode (`FLASK_DEBUG=False`)
-- Storage directory to `/tmp/stored_codes` (automatically read by the app)
-
-**Just deploy to Vercel** and it should work! However, remember:
-- ⚠️ Uploaded files will be **temporary** and won't persist
-- ⚠️ Files will be lost when the serverless function terminates
-
-## Error Messages You'll See
+## Error Messages
 
 Instead of generic errors, you'll now see helpful messages:
 
@@ -46,6 +51,22 @@ Instead of generic errors, you'll now see helpful messages:
 }
 ```
 **Solution**: Reduce your file size to under 16MB
+
+### Permission Issues
+```json
+{
+  "error": "Failed to create storage directory. The server may have limited write permissions."
+}
+```
+**Solution**: This shouldn't happen anymore with the env variable fix. If it does, check your Vercel configuration.
+
+### Invalid Input
+```json
+{
+  "error": "No files selected"
+}
+```
+**Solution**: Make sure you've selected files before clicking upload
 
 ### Permission Issues
 ```json
