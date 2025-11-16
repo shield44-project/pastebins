@@ -257,7 +257,8 @@ class CodeAnalyzer:
             self.alternatives.append({
                 'approach': 'Use std::vector instead of raw arrays',
                 'benefit': 'Automatic memory management, bounds checking, and better safety',
-                'example': 'std::vector<int> arr(size); instead of int arr[size];'
+                'example': 'std::vector<int> arr(size); instead of int arr[size];',
+                'recommended_code': self._generate_vector_example(code)
             })
         
         # printf vs cout
@@ -265,7 +266,8 @@ class CodeAnalyzer:
             self.alternatives.append({
                 'approach': 'Use std::cout instead of printf()',
                 'benefit': 'Type-safe, no format specifiers needed, better C++ integration',
-                'example': 'std::cout << value << std::endl; instead of printf("%d", value);'
+                'example': 'std::cout << value << std::endl; instead of printf("%d", value);',
+                'recommended_code': self._convert_printf_to_cout(code)
             })
         
         # scanf vs cin
@@ -273,7 +275,8 @@ class CodeAnalyzer:
             self.alternatives.append({
                 'approach': 'Use std::cin instead of scanf()',
                 'benefit': 'Type-safe input, no format specifiers needed, better error handling',
-                'example': 'std::cin >> value; instead of scanf("%d", &value);'
+                'example': 'std::cin >> value; instead of scanf("%d", &value);',
+                'recommended_code': self._convert_scanf_to_cin(code)
             })
         
         # Manual memory management
@@ -281,7 +284,8 @@ class CodeAnalyzer:
             self.alternatives.append({
                 'approach': 'Use smart pointers (C++11 and later)',
                 'benefit': 'Automatic memory management, exception safety, no manual delete needed',
-                'example': 'std::unique_ptr<Type> ptr = std::make_unique<Type>(); instead of Type* ptr = new Type();'
+                'example': 'std::unique_ptr<Type> ptr = std::make_unique<Type>(); instead of Type* ptr = new Type();',
+                'recommended_code': self._convert_to_smart_pointers(code)
             })
         
         # C-style casts
@@ -289,8 +293,117 @@ class CodeAnalyzer:
             self.alternatives.append({
                 'approach': 'Use C++ style casts',
                 'benefit': 'More explicit, searchable, compile-time checking',
-                'example': 'static_cast<int>(value) instead of (int)value'
+                'example': 'static_cast<int>(value) instead of (int)value',
+                'recommended_code': self._convert_to_cpp_casts(code)
             })
+        
+        # gets() to fgets()
+        if 'gets(' in code:
+            self.alternatives.append({
+                'approach': 'Replace unsafe gets() with fgets()',
+                'benefit': 'Prevents buffer overflow vulnerabilities',
+                'example': 'fgets(buffer, sizeof(buffer), stdin); instead of gets(buffer);',
+                'recommended_code': self._convert_gets_to_fgets(code)
+            })
+        
+        # strcpy to strncpy
+        if 'strcpy(' in code:
+            self.alternatives.append({
+                'approach': 'Replace strcpy() with strncpy() or safer alternatives',
+                'benefit': 'Prevents buffer overflow by limiting copy length',
+                'example': 'strncpy(dest, src, sizeof(dest)-1); dest[sizeof(dest)-1] = \'\\0\';',
+                'recommended_code': self._convert_strcpy_to_strncpy(code)
+            })
+    
+    def _generate_vector_example(self, code: str) -> str:
+        """Generate example using std::vector instead of raw arrays."""
+        # Find array declarations and suggest vector version
+        array_pattern = r'(\w+)\s+(\w+)\s*\[\s*(\d+)\s*\]'
+        matches = re.findall(array_pattern, code)
+        if matches:
+            type_name, var_name, size = matches[0]
+            return f"// Instead of: {type_name} {var_name}[{size}];\n// Use:\n#include <vector>\nstd::vector<{type_name}> {var_name}({size});"
+        return "std::vector<int> arr(10); // Example with size 10"
+    
+    def _convert_printf_to_cout(self, code: str) -> str:
+        """Convert simple printf statements to cout."""
+        # Handle common printf patterns
+        examples = []
+        if 'printf("%d' in code:
+            examples.append('// Instead of: printf("%d", value);\n// Use:\nstd::cout << value << std::endl;')
+        if 'printf("%s' in code:
+            examples.append('// Instead of: printf("%s", str);\n// Use:\nstd::cout << str << std::endl;')
+        if 'printf("%f' in code:
+            examples.append('// Instead of: printf("%f", num);\n// Use:\nstd::cout << num << std::endl;')
+        
+        if examples:
+            return '\n\n'.join(examples)
+        return '// Include <iostream>\n#include <iostream>\nstd::cout << "Hello, World!" << std::endl;'
+    
+    def _convert_scanf_to_cin(self, code: str) -> str:
+        """Convert scanf statements to cin."""
+        examples = []
+        if 'scanf("%d' in code:
+            examples.append('// Instead of: scanf("%d", &value);\n// Use:\nstd::cin >> value;')
+        if 'scanf("%s' in code:
+            examples.append('// Instead of: scanf("%s", str);\n// Use:\n// For C-style strings:\nchar str[100];\nstd::cin >> str;\n// Or better, use std::string:\nstd::string str;\nstd::cin >> str;')
+        if 'scanf("%f' in code:
+            examples.append('// Instead of: scanf("%f", &num);\n// Use:\nstd::cin >> num;')
+        
+        if examples:
+            return '\n\n'.join(examples)
+        return '// Include <iostream>\n#include <iostream>\nint value;\nstd::cin >> value;'
+    
+    def _convert_to_smart_pointers(self, code: str) -> str:
+        """Convert raw pointers to smart pointers."""
+        examples = []
+        if 'new ' in code:
+            examples.append('// Instead of: Type* ptr = new Type();\n// Use:\n#include <memory>\nauto ptr = std::make_unique<Type>();\n// Or for shared ownership:\nauto ptr = std::make_shared<Type>();')
+        if 'malloc(' in code:
+            examples.append('// Instead of: ptr = (Type*)malloc(sizeof(Type));\n// Use:\n#include <memory>\nauto ptr = std::make_unique<Type>();')
+        
+        if examples:
+            return '\n\n'.join(examples)
+        return '#include <memory>\nauto ptr = std::make_unique<int>(42);\n// No need to call delete!'
+    
+    def _convert_to_cpp_casts(self, code: str) -> str:
+        """Convert C-style casts to C++ style casts."""
+        return '''// Instead of: int x = (int)value;
+// Use:
+int x = static_cast<int>(value);
+
+// For pointers:
+// Instead of: Derived* d = (Derived*)base;
+// Use:
+Derived* d = dynamic_cast<Derived*>(base);
+
+// For const removal (use with caution):
+// const_cast<Type*>(ptr)
+
+// For reinterpretation (use rarely):
+// reinterpret_cast<NewType*>(ptr)'''
+    
+    def _convert_gets_to_fgets(self, code: str) -> str:
+        """Convert gets() to fgets()."""
+        return '''// Instead of: gets(buffer);
+// Use:
+char buffer[100];
+if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
+    // Remove trailing newline if present
+    buffer[strcspn(buffer, "\\n")] = '\\0';
+    // Use buffer safely
+}'''
+    
+    def _convert_strcpy_to_strncpy(self, code: str) -> str:
+        """Convert strcpy() to strncpy()."""
+        return '''// Instead of: strcpy(dest, src);
+// Use:
+strncpy(dest, src, sizeof(dest) - 1);
+dest[sizeof(dest) - 1] = '\\0'; // Ensure null termination
+
+// Or better, use C++ std::string:
+#include <string>
+std::string dest = src; // Automatic memory management'''
     
     def _generate_summary(self) -> Dict:
         """Generate a summary of the analysis."""

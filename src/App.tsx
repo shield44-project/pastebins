@@ -10,11 +10,16 @@ const App: React.FC = () => {
     console.log('Upload modal opened');
   };
 
+  const handleOpenNotesModal = (): void => {
+    // Notes modal functionality - redirect to index.html since it has the full implementation
+    window.location.href = 'index.html';
+  };
+
   return (
     <>
       <MatrixRain />
       <div className="container">
-        <Header onOpenUpload={handleOpenUploadModal} />
+        <Header onOpenUpload={handleOpenUploadModal} onOpenNotes={handleOpenNotesModal} />
         
         <div className="card">
           <h2 className="section-title">✨ Key Features</h2>
