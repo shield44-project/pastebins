@@ -127,7 +127,7 @@ body {
 /* Theme Toggle Button */
 .theme-toggle {
     background: var(--accent-primary);
-    color: var(--nav-text);
+    color: #000000;  /* Fixed black color for visibility across all themes */
     border: 2px solid var(--accent-primary);
     padding: 0.5rem 1rem;
     border-radius: 25px;
@@ -145,6 +145,7 @@ body {
     background: var(--accent-hover);
     box-shadow: 0 0 20px var(--neon-glow);
     transform: scale(1.05);
+    color: #000000;  /* Keep black on hover too */
 }
 
 /* Navigation */
