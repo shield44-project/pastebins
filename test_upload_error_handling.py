@@ -5,13 +5,45 @@ import pytest
 import tempfile
 import os
 import json
-from app import app
 from io import BytesIO
+
+
+def test_codes_directory_environment_variable():
+    """Test that CODES_DIRECTORY environment variable is respected"""
+    # Set environment variable before importing app
+    test_dir = '/tmp/test_codes'
+    os.environ['CODES_DIRECTORY'] = test_dir
+    
+    # Reimport to pick up the environment variable
+    import importlib
+    import app as app_module
+    importlib.reload(app_module)
+    
+    assert app_module.app.config['CODES_DIRECTORY'] == test_dir, \
+        f"Expected {test_dir}, got {app_module.app.config['CODES_DIRECTORY']}"
+    
+    # Clean up
+    os.environ.pop('CODES_DIRECTORY', None)
+
+
+def test_codes_directory_default():
+    """Test that CODES_DIRECTORY defaults to 'stored_codes' when not set"""
+    # Make sure environment variable is not set
+    os.environ.pop('CODES_DIRECTORY', None)
+    
+    # Reimport to pick up the default
+    import importlib
+    import app as app_module
+    importlib.reload(app_module)
+    
+    assert app_module.app.config['CODES_DIRECTORY'] == 'stored_codes', \
+        f"Expected 'stored_codes', got {app_module.app.config['CODES_DIRECTORY']}"
 
 
 @pytest.fixture
 def client():
     """Create a test client for the Flask app"""
+    from app import app
     app.config['TESTING'] = True
     app.config['CODES_DIRECTORY'] = tempfile.mkdtemp()
     with app.test_client() as client:
@@ -130,6 +162,7 @@ def test_upload_invalid_filename(client):
 
 def test_error_handler_413():
     """Test that 413 error handler is registered"""
+    from app import app
     with app.test_client() as client:
         # This tests that the error handler exists
         # We can't easily trigger a 413 in a unit test without mocking
@@ -138,6 +171,7 @@ def test_error_handler_413():
 
 def test_error_handler_500():
     """Test that 500 error handler is registered"""
+    from app import app
     with app.test_client() as client:
         # This tests that the error handler exists
         assert 500 in app.error_handler_spec[None]

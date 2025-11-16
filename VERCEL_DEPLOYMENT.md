@@ -2,6 +2,10 @@
 
 This guide explains how to deploy the application to Vercel and the limitations you should be aware of.
 
+## ✅ Quick Fix Applied
+
+The application now correctly reads the `CODES_DIRECTORY` environment variable. The included `vercel.json` configuration sets this to `/tmp/stored_codes` automatically.
+
 ## Important Notes About Vercel Deployment
 
 ### Serverless Environment Limitations
@@ -27,10 +31,11 @@ For production deployment on Vercel, you should:
    - Store file metadata in a database
    - Store file content in a database or object storage
 
-3. **Use Vercel's `/tmp` Directory**:
+3. **Use Vercel's `/tmp` Directory** (Default Configuration):
+   - The included `vercel.json` automatically configures this
    - Files can be written to `/tmp` directory (up to 500MB)
    - Files in `/tmp` are ephemeral and only exist for the duration of the function execution
-   - Not suitable for long-term storage
+   - Not suitable for long-term storage but prevents read-only filesystem errors
 
 ## Error Handling Improvements
 
@@ -43,19 +48,33 @@ This application has been updated with comprehensive error handling that provide
 
 ## Configuration for Vercel
 
-### Option 1: Use Environment Variables for Storage Path
+### Automatic Configuration (Recommended)
 
-Set the `CODES_DIRECTORY` to `/tmp/stored_codes` for Vercel:
+The repository includes a `vercel.json` file that automatically configures the application for Vercel:
 
 ```json
 {
-  "build": {
-    "env": {
-      "CODES_DIRECTORY": "/tmp/stored_codes"
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
     }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "env": {
+    "FLASK_DEBUG": "False",
+    "CODES_DIRECTORY": "/tmp/stored_codes"
   }
 }
 ```
+
+The app reads the `CODES_DIRECTORY` environment variable, so you can override it in Vercel's dashboard if needed.
 
 **Note**: Files in `/tmp` are not persistent and will be lost between function invocations.
 

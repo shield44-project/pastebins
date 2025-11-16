@@ -2,9 +2,17 @@
 
 If you're experiencing "Internal Server Error" when uploading files on Vercel, this has been fixed! 🎉
 
+## ✅ Latest Fix (Critical)
+
+**Problem**: The app was not reading the `CODES_DIRECTORY` environment variable, causing read-only filesystem errors.
+
+**Solution**: Updated `app.py` to read the environment variable. The app now correctly uses `/tmp/stored_codes` on Vercel.
+
 ## What Was Fixed
 
-The application now has comprehensive error handling that provides clear, actionable error messages instead of generic 500 errors.
+1. **Environment Variable Support**: The application now reads `CODES_DIRECTORY` from environment variables
+2. **Error Handling**: Comprehensive error messages instead of generic 500 errors
+3. **Vercel Configuration**: Included `vercel.json` automatically configures `/tmp` storage
 
 ## What You Need to Know
 
@@ -20,7 +28,7 @@ Vercel uses a **serverless environment** with an ephemeral (temporary) filesyste
 
 The repository now includes a `vercel.json` configuration file that sets up:
 - Flask in production mode (`FLASK_DEBUG=False`)
-- Storage directory to `/tmp/stored_codes`
+- Storage directory to `/tmp/stored_codes` (automatically read by the app)
 
 **Just deploy to Vercel** and it should work! However, remember:
 - ⚠️ Uploaded files will be **temporary** and won't persist

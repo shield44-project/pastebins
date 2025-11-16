@@ -25,7 +25,7 @@ from cryptography.hazmat.backends import default_backend
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
-app.config['CODES_DIRECTORY'] = 'stored_codes'
+app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
 # Password-based encryption utilities
