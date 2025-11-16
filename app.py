@@ -23,6 +23,16 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
+app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
+
+# GitHub configuration
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+GITHUB_REPO = os.environ.get('GITHUB_REPO', 'shield44-project/pastebins')
+GITHUB_BRANCH = os.environ.get('GITHUB_BRANCH', 'main')
+
 # GitHub integration
 try:
     from github import Github, GithubException
@@ -45,16 +55,6 @@ except ImportError as e:
     BLOB_STORAGE_ENABLED = False
     blob_client = None
     app.logger.warning(f"Blob storage module not available: {str(e)}")
-
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
-app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
-
-# GitHub configuration
-GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
-GITHUB_REPO = os.environ.get('GITHUB_REPO', 'shield44-project/pastebins')
-GITHUB_BRANCH = os.environ.get('GITHUB_BRANCH', 'main')
 
 # Password-based encryption utilities
 def derive_key_from_password(password: str, salt: bytes) -> bytes:
