@@ -6,7 +6,7 @@
     <title>NeonBin - Matrix Code Vault | Secure Code Storage</title>
     
     <!-- Preloaded Code Files from stored_codes/ - Load first! -->
-    <script src="/static/preloaded_codes.js"></script>
+    <script src="static/preloaded_codes.js"></script>
     
     <style>
         * {
@@ -715,6 +715,7 @@ cd codes_storer_website</div>
                 <div id="viewNoteContent" style="background: rgba(0, 255, 0, 0.05); border: 1px solid rgba(0, 255, 0, 0.2); padding: 20px; border-radius: 8px; color: #00ff00; white-space: pre-wrap; margin-bottom: 20px;"></div>
                 <div id="viewNoteImages" style="margin-bottom: 20px;"></div>
                 <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="exportCurrentNote()">💾 Export Note</button>
                     <button class="btn btn-primary" onclick="editCurrentNote()">✏️ Edit</button>
                     <button class="btn btn-secondary" onclick="deleteCurrentNote()">🗑️ Delete</button>
                     <button class="btn btn-secondary" onclick="closeViewNoteModal()">Close</button>
@@ -912,6 +913,82 @@ cd codes_storer_website</div>
                 deleteNote(currentViewingNote.id);
                 closeViewNoteModal();
             }
+        }
+        
+        // Export note with screenshots as HTML
+        function exportCurrentNote() {
+            if (!currentViewingNote) return;
+            
+            const note = currentViewingNote;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            
+            // Create HTML content
+            let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${note.title}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .note-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 10px; }
+        .meta { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .content {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .images { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .images img {
+            width: 100%;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="note-container">
+        <h1>${note.title}</h1>
+        <div class="meta">Created: ${new Date(note.created).toLocaleString()}</div>
+        <div class="content">${note.content}</div>`;
+            
+            if (note.images && note.images.length > 0) {
+                html += '<div class="images">';
+                note.images.forEach((img, idx) => {
+                    html += `<img src="${img.dataUrl}" alt="Screenshot ${idx + 1}">`;
+                });
+                html += '</div>';
+            }
+            
+            html += `
+    </div>
+</body>
+</html>`;
+            
+            // Create and download the file
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${note.title.replace(/[^a-z0-9]/gi, '_')}_${timestamp}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showAlert('Note exported successfully!', 'success');
         }
         
         // Note image upload setup
@@ -1517,6 +1594,6 @@ cd codes_storer_website</div>
     </script>
     
     <!-- Matrix Rain Background Effect -->
-    <script src="/static/js/matrix-rain.js"></script>
+    <script src="static/js/matrix-rain.js"></script>
 </body>
 </html>

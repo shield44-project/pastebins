@@ -175,13 +175,13 @@ def execute_code_online(code_content, stdin_input='', language='c'):
         # Select compiler based on language
         compiler_map = {
             'c': 'gcc-head',
-            'cpp': 'gcc-head',  # Wandbox uses gcc-head for both C and C++
+            'cpp': 'clang-head',  # Use clang for C++ to avoid gcc-head issues
             'java': 'openjdk-head'
         }
         
         compiler_option_map = {
-            'c': '-O2 -Wall',
-            'cpp': '-O2 -Wall -std=c++17',
+            'c': '-Wall -O2',
+            'cpp': '-Wall -O2 -std=c++17',
             'java': ''
         }
         
