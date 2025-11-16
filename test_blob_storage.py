@@ -24,14 +24,14 @@ class TestVercelBlobStorage(unittest.TestCase):
         self.test_content = 'print("Hello, World!")'
         self.test_pathname = 'test/hello.py'
         
-    @patch.dict(os.environ, {'BLOB_READ_WRITE_TOKEN': ''}, clear=False)
+    @patch.dict(os.environ, {'shield44_READ_WRITE_TOKEN': ''}, clear=False)
     def test_blob_storage_disabled_when_no_token(self):
         """Test that blob storage is disabled when token is not configured"""
         self.assertFalse(is_blob_storage_enabled())
         client = get_blob_client()
         self.assertIsNone(client)
     
-    @patch.dict(os.environ, {'BLOB_READ_WRITE_TOKEN': 'vercel_blob_rw_test'}, clear=False)
+    @patch.dict(os.environ, {'shield44_READ_WRITE_TOKEN': 'vercel_blob_rw_test'}, clear=False)
     def test_blob_storage_enabled_when_token_set(self):
         """Test that blob storage is enabled when token is configured"""
         self.assertTrue(is_blob_storage_enabled())
@@ -207,7 +207,7 @@ class TestVercelBlobStorage(unittest.TestCase):
 class TestBlobStorageIntegration(unittest.TestCase):
     """Integration tests for blob storage with Flask app"""
     
-    @patch.dict(os.environ, {'BLOB_READ_WRITE_TOKEN': 'test_token'}, clear=False)
+    @patch.dict(os.environ, {'shield44_READ_WRITE_TOKEN': 'test_token'}, clear=False)
     @patch('blob_storage.VercelBlobStorage')
     def test_blob_client_created_when_enabled(self, mock_blob_class):
         """Test that blob client is created when token is configured"""

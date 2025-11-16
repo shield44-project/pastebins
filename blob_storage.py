@@ -25,9 +25,9 @@ class VercelBlobStorage:
         Args:
             token: Vercel Blob read-write token. If None, reads from environment variable.
         """
-        self.token = token or os.environ.get('BLOB_READ_WRITE_TOKEN')
+        self.token = token or os.environ.get('shield44_READ_WRITE_TOKEN')
         if not self.token:
-            raise ValueError("BLOB_READ_WRITE_TOKEN not provided and not found in environment")
+            raise ValueError("shield44_READ_WRITE_TOKEN not provided and not found in environment")
         
         # Remove any 'vercel_blob_rw_' prefix if present (normalized token format)
         if self.token.startswith('vercel_blob_rw_'):
@@ -219,7 +219,7 @@ def get_blob_client() -> Optional[VercelBlobStorage]:
         VercelBlobStorage instance if token is configured, None otherwise
     """
     try:
-        token = os.environ.get('BLOB_READ_WRITE_TOKEN')
+        token = os.environ.get('shield44_READ_WRITE_TOKEN')
         if token:
             return VercelBlobStorage(token)
         return None
@@ -234,4 +234,4 @@ def is_blob_storage_enabled() -> bool:
     Returns:
         True if blob storage is enabled, False otherwise
     """
-    return bool(os.environ.get('BLOB_READ_WRITE_TOKEN'))
+    return bool(os.environ.get('shield44_READ_WRITE_TOKEN'))

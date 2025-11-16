@@ -422,7 +422,7 @@ def save_code_metadata(language, metadata):
     
     # If both storage methods failed, raise an error
     if local_save_failed and (not BLOB_STORAGE_ENABLED or blob_save_failed):
-        raise Exception("Failed to save metadata: both local and blob storage failed. Please configure BLOB_READ_WRITE_TOKEN.")
+        raise Exception("Failed to save metadata: both local and blob storage failed. Please configure shield44_READ_WRITE_TOKEN.")
 
 def load_code_metadata_from_blob(language):
     """Load metadata for codes from blob storage"""
@@ -1016,7 +1016,7 @@ def upload_code():
                             app.logger.warning(f"Blob storage failed but local file saved")
                     elif not local_storage_available:
                         # No blob storage and no local storage - fail
-                        return jsonify({'error': 'No storage available. Please configure BLOB_READ_WRITE_TOKEN or fix filesystem permissions.'}), 500
+                        return jsonify({'error': 'No storage available. Please configure shield44_READ_WRITE_TOKEN or fix filesystem permissions.'}), 500
                 else:
                     # Try to save the code file normally to local storage if available
                     if local_storage_available:
@@ -1060,7 +1060,7 @@ def upload_code():
                             app.logger.warning(f"Blob storage failed but local file saved")
                     elif not local_storage_available:
                         # No blob storage and no local storage - fail
-                        return jsonify({'error': 'No storage available. Please configure BLOB_READ_WRITE_TOKEN or fix filesystem permissions.'}), 500
+                        return jsonify({'error': 'No storage available. Please configure shield44_READ_WRITE_TOKEN or fix filesystem permissions.'}), 500
             except PermissionError as e:
                 app.logger.error(f"Permission error saving file {filepath}: {str(e)}")
                 return jsonify({'error': 'Permission denied - cannot write file. The server may have limited write permissions.'}), 500

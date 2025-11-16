@@ -83,7 +83,7 @@ User Upload → Flask App → Local Storage (immediate)
 
 ### Configuration
 
-Single environment variable: `BLOB_READ_WRITE_TOKEN`
+Single environment variable: `shield44_READ_WRITE_TOKEN`
 
 **When Set:**
 - Blob storage enabled
@@ -203,7 +203,7 @@ client = VercelBlobStorage(token: Optional[str] = None)
 
 1. **Create Blob Store:**
    ```bash
-   vercel blob create pastebins-storage
+   vercel blob create pastebins-blob
    ```
 
 2. **Get Token:**
@@ -211,7 +211,7 @@ client = VercelBlobStorage(token: Optional[str] = None)
 
 3. **Set Environment Variable:**
    ```bash
-   vercel env add BLOB_READ_WRITE_TOKEN
+   vercel env add shield44_READ_WRITE_TOKEN
    # Paste your token when prompted
    ```
 
@@ -224,7 +224,7 @@ client = VercelBlobStorage(token: Optional[str] = None)
 
 1. **Set Environment Variable:**
    ```bash
-   export BLOB_READ_WRITE_TOKEN=vercel_blob_rw_YOUR_TOKEN
+   export shield44_READ_WRITE_TOKEN=vercel_blob_rw_YOUR_TOKEN
    ```
 
 2. **Run Application:**
@@ -268,7 +268,7 @@ INFO: Fetched code from blob storage: https://...
 ### ⚠️ Security Notes
 
 1. **Public Access:** All uploaded files are publicly accessible by design (for code sharing)
-2. **Token Protection:** Keep `BLOB_READ_WRITE_TOKEN` secure - it provides full storage access
+2. **Token Protection:** Keep `shield44_READ_WRITE_TOKEN` secure - it provides full storage access
 3. **Rate Limiting:** Consider implementing rate limits for uploads (not included)
 
 ## Future Enhancements
@@ -305,7 +305,7 @@ INFO: Fetched code from blob storage: https://...
 ### Common Issues
 
 **"Blob storage not enabled - token not configured"**
-- Solution: Set `BLOB_READ_WRITE_TOKEN` environment variable
+- Solution: Set `shield44_READ_WRITE_TOKEN` environment variable
 
 **"Failed to upload to blob storage: 401"**
 - Solution: Token is invalid or expired, generate new token

@@ -16,7 +16,7 @@ Vercel Blob Storage provides persistent, scalable storage for your code files wh
 
 1. A Vercel account
 2. A Vercel Blob Store created in your project
-3. The `BLOB_READ_WRITE_TOKEN` from your Vercel Blob Store
+3. The `shield44_READ_WRITE_TOKEN` from your Vercel Blob Store
 
 ## Step 1: Create a Vercel Blob Store
 
@@ -26,13 +26,13 @@ Vercel Blob Storage provides persistent, scalable storage for your code files wh
 2. Navigate to the **Storage** tab
 3. Click **Create Database** or **Add Store**
 4. Select **Blob Store**
-5. Give it a name (e.g., `pastebins-storage`)
+5. Give it a name (e.g., `pastebins-blob`)
 6. Click **Create**
 
 ### Using Vercel CLI
 
 ```bash
-vercel blob create pastebins-storage
+vercel blob create pastebins-blob
 ```
 
 ## Step 2: Get Your Read-Write Token
@@ -53,7 +53,7 @@ After creating the blob store:
 1. Go to your Vercel project settings
 2. Navigate to **Environment Variables**
 3. Add a new variable:
-   - **Name:** `BLOB_READ_WRITE_TOKEN`
+   - **Name:** `shield44_READ_WRITE_TOKEN`
    - **Value:** Your blob read-write token (e.g., `vercel_blob_rw_GmsSyO1ENI6nA5GJ_ETd7tIhY7RialiPNyz5YaP8U2EZTAZ`)
    - **Environment:** Select **Production**, **Preview**, and **Development**
 4. Click **Save**
@@ -64,18 +64,18 @@ After creating the blob store:
 Add to your `.env` file:
 
 ```bash
-BLOB_READ_WRITE_TOKEN=vercel_blob_rw_YOUR_TOKEN_HERE
+shield44_READ_WRITE_TOKEN=vercel_blob_rw_YOUR_TOKEN_HERE
 ```
 
 Or export as an environment variable:
 
 ```bash
-export BLOB_READ_WRITE_TOKEN=vercel_blob_rw_YOUR_TOKEN_HERE
+export shield44_READ_WRITE_TOKEN=vercel_blob_rw_YOUR_TOKEN_HERE
 ```
 
 ## Step 4: Verify Integration
 
-After deploying with the `BLOB_READ_WRITE_TOKEN` environment variable:
+After deploying with the `shield44_READ_WRITE_TOKEN` environment variable:
 
 1. Upload a new code file through the web interface
 2. Check your application logs for confirmation:
@@ -155,7 +155,7 @@ The blob storage module (`blob_storage.py`) provides:
 ### VercelBlobStorage Class
 
 ```python
-blob_client = VercelBlobStorage(token=BLOB_READ_WRITE_TOKEN)
+blob_client = VercelBlobStorage(token=shield44_READ_WRITE_TOKEN)
 ```
 
 #### Methods
@@ -190,7 +190,7 @@ blob_client = VercelBlobStorage(token=BLOB_READ_WRITE_TOKEN)
 
 ### Issue: "Blob storage not enabled - token not configured"
 
-**Solution:** Ensure `BLOB_READ_WRITE_TOKEN` environment variable is set correctly and redeploy.
+**Solution:** Ensure `shield44_READ_WRITE_TOKEN` environment variable is set correctly and redeploy.
 
 ### Issue: "Failed to upload to blob storage: 401"
 
@@ -228,13 +228,13 @@ For a typical code storage application:
 - ✅ All blob URLs are public (files are intentionally shared)
 - ✅ File uploads are validated and sanitized
 - ✅ No direct file system access from users
-- ⚠️ Keep your `BLOB_READ_WRITE_TOKEN` secure - it provides full access to your blob storage
+- ⚠️ Keep your `shield44_READ_WRITE_TOKEN` secure - it provides full access to your blob storage
 
 ## Migration from GitHub-only Storage
 
 If you're currently using GitHub as your only storage backend:
 
-1. Enable blob storage by setting `BLOB_READ_WRITE_TOKEN`
+1. Enable blob storage by setting `shield44_READ_WRITE_TOKEN`
 2. Existing files will continue to work from local filesystem
 3. New uploads will be stored in both local and blob storage
 4. Optionally, re-upload existing files through the UI to add them to blob storage
@@ -243,7 +243,7 @@ If you're currently using GitHub as your only storage backend:
 
 To disable blob storage and revert to local-only storage:
 
-1. Remove the `BLOB_READ_WRITE_TOKEN` environment variable
+1. Remove the `shield44_READ_WRITE_TOKEN` environment variable
 2. Redeploy your application
 3. Application will fall back to local filesystem only
 

@@ -157,7 +157,7 @@ The application can be configured using environment variables:
 - Default: `stored_codes`
 - Example: `/tmp/stored_codes` (for serverless platforms)
 
-**`BLOB_READ_WRITE_TOKEN`** (optional, recommended for Vercel)
+**`shield44_READ_WRITE_TOKEN`** (optional, recommended for Vercel)
 - Vercel Blob Storage read-write token for persistent storage
 - Enables file persistence on serverless platforms
 - See [VERCEL_BLOB_SETUP.md](VERCEL_BLOB_SETUP.md) for setup

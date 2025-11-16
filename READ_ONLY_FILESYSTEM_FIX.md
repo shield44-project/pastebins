@@ -108,7 +108,7 @@ if local_save_failed and blob_save_failed:
 
 ### When Both Fail
 - ❌ Upload fails
-- 💡 Error: "No storage available. Please configure BLOB_READ_WRITE_TOKEN or fix filesystem permissions."
+- 💡 Error: "No storage available. Please configure shield44_READ_WRITE_TOKEN or fix filesystem permissions."
 
 ## Testing
 
@@ -119,7 +119,7 @@ if local_save_failed and blob_save_failed:
 ## Deployment
 
 On Vercel with blob storage:
-1. Set environment variable: `BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...`
+1. Set environment variable: `shield44_READ_WRITE_TOKEN=vercel_blob_rw_...`
 2. Deploy application
 3. Upload works without local filesystem access
 4. Files stored in blob, accessible via URLs
