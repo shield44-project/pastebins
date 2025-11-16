@@ -142,6 +142,19 @@
             box-shadow: 0 4px 15px rgba(0, 255, 0, 0.3);
         }
 
+        .btn-github {
+            background: linear-gradient(135deg, #6e5494, #5a4374);
+            color: white;
+            border: 1px solid #6e5494;
+            box-shadow: 0 4px 15px rgba(110, 84, 148, 0.4);
+        }
+
+        .btn-github:hover {
+            background: linear-gradient(135deg, #5a4374, #4a3364);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(110, 84, 148, 0.6);
+        }
+
         .section-title {
             color: #00ff00;
             font-size: 2em;
@@ -719,16 +732,9 @@ cd codes_storer_website</div>
                         <div id="fileList"></div>
                     </div>
                     
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" name="auto_commit_github" id="auto_commit_github">
-                            📂 Auto-commit to GitHub
-                        </label>
-                        <p style="font-size: 0.9em; color: #b0b0b0; margin-top: 5px;">Automatically commit and push this file to the GitHub repository (requires GitHub integration to be configured).</p>
-                    </div>
-                    
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button type="submit" class="btn btn-primary" style="flex: 1;">Upload Code</button>
+                        <button type="submit" name="submit_action" value="upload" class="btn btn-primary" style="flex: 1;">📤 Upload Code</button>
+                        <button type="submit" name="submit_action" value="upload_github" class="btn btn-github" style="flex: 1;">📂 Upload & Push to GitHub</button>
                         <button type="button" class="btn btn-secondary" onclick="closeUploadModal()" style="flex: 1;">Cancel</button>
                     </div>
                 </form>

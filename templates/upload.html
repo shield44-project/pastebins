@@ -77,18 +77,15 @@
             <p class="help-text">Secret files will only be visible in the "Secret Folders" section.</p>
         </div>
 
-        <!-- GitHub Auto-Commit Option -->
-        <div class="form-group">
-            <label>
-                <input type="checkbox" name="auto_commit_github" id="auto_commit_github">
-                📂 Auto-commit to GitHub
-            </label>
-            <p class="help-text">Automatically commit and push this file to the GitHub repository (requires GitHub integration to be configured).</p>
-        </div>
         {% endif %}
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">{% if edit_mode %}💾 Save Changes{% else %}Upload Code{% endif %}</button>
+            {% if edit_mode %}
+            <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+            {% else %}
+            <button type="submit" name="submit_action" value="upload" class="btn btn-primary">📤 Upload Code</button>
+            <button type="submit" name="submit_action" value="upload_github" class="btn btn-github">📂 Upload & Push to GitHub</button>
+            {% endif %}
             <a href="{% if edit_mode %}{{ url_for('view_code', language=language, code_id=code_id) }}{% else %}/{% endif %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
@@ -138,17 +135,10 @@
             <p class="help-text">Secret files will only be visible in the "Secret Folders" section.</p>
         </div>
 
-        <!-- GitHub Auto-Commit Option -->
-        <div class="form-group">
-            <label>
-                <input type="checkbox" name="auto_commit_github" id="auto_commit_github_files">
-                📂 Auto-commit to GitHub
-            </label>
-            <p class="help-text">Automatically commit and push these files to the GitHub repository (requires GitHub integration to be configured).</p>
-        </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Upload Files</button>
+            <button type="submit" name="submit_action" value="upload" class="btn btn-primary">📤 Upload Files</button>
+            <button type="submit" name="submit_action" value="upload_github" class="btn btn-github">📂 Upload Files & Push to GitHub</button>
             <a href="/" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
@@ -246,6 +236,33 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
+}
+
+.btn-github {
+    background: linear-gradient(135deg, #6e5494, #5a4374);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-github:hover {
+    background: linear-gradient(135deg, #5a4374, #4a3364);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(110, 84, 148, 0.4);
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 20px;
 }
 </style>
 
