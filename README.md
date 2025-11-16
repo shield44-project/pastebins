@@ -4,6 +4,8 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 
 **🎉 Now with TypeScript and React support!** The project includes a modern frontend built with TypeScript and React. See [TYPESCRIPT_REACT_SETUP.md](TYPESCRIPT_REACT_SETUP.md) for details.
 
+**🤖 NEW: AI-Powered C/C++ Code Analysis!** The platform now includes intelligent code analysis for C and C++ with security checks, best practices, and alternative implementations. See [ENHANCED_COMPILER_README.md](ENHANCED_COMPILER_README.md) for details.
+
 ## Features
 
 ### 📁 Code Storage & Organization
@@ -22,6 +24,18 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 - Provide custom input (stdin) for interactive programs
 - View program output and error messages in real-time
 - Sandboxed execution with timeout limits for security
+- **Enhanced C/C++ compiler with multiple standards support (C11, C++17, etc.)**
+- **Better error messages with helpful hints**
+
+### 🤖 AI Code Analysis (C/C++)
+- **Intelligent static code analysis** for C and C++ code
+- **Security vulnerability detection** (buffer overflows, format strings, etc.)
+- **Memory leak detection** and resource management suggestions
+- **Best practices recommendations** (const correctness, modern C++ features)
+- **Alternative implementation suggestions** (vectors vs arrays, smart pointers, etc.)
+- **Code quality improvements** (magic numbers, uninitialized variables)
+- **Real-time analysis** with detailed, actionable feedback
+- See [ENHANCED_COMPILER_README.md](ENHANCED_COMPILER_README.md) for full documentation
 
 ### 🌐 HTML Website Preview
 - Upload complete HTML websites
@@ -65,13 +79,13 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 
 ## Supported Languages
 
-| Language | Extension | Execution Support | Compilation |
-|----------|-----------|-------------------|-------------|
-| Python   | `.py`     | ✅ Yes            | No          |
-| Java     | `.java`   | ✅ Yes            | Yes (javac) |
-| C        | `.c`      | ✅ Yes            | Yes (gcc)   |
-| C++      | `.cpp`    | ✅ Yes            | Yes (g++)   |
-| HTML     | `.html`   | 🌐 Live Preview   | N/A         |
+| Language | Extension | Execution Support | Compilation | AI Analysis |
+|----------|-----------|-------------------|-------------|-------------|
+| Python   | `.py`     | ✅ Yes            | No          | ⏳ Coming Soon |
+| Java     | `.java`   | ✅ Yes            | Yes (javac) | ⏳ Coming Soon |
+| C        | `.c`      | ✅ Yes            | Yes (gcc/clang) | ✅ **Yes** |
+| C++      | `.cpp`    | ✅ Yes            | Yes (g++/clang++) | ✅ **Yes** |
+| HTML     | `.html`   | 🌐 Live Preview   | N/A         | N/A |
 
 ## GitHub Pages Deployment
 
@@ -394,15 +408,32 @@ This project is open source and available under the MIT License.
 - Ensure title doesn't contain special characters
 - Verify the file extension matches the selected language
 
+### AI Analysis not showing results?
+- Ensure you're viewing a C or C++ file
+- Check browser console for errors
+- Try refreshing the page
+- See [ENHANCED_COMPILER_README.md](ENHANCED_COMPILER_README.md) for troubleshooting
+
+### Enhanced compiler errors?
+- Install required compilers: `sudo apt-get install gcc g++ clang`
+- System will automatically fall back to online compilation
+- Check [ENHANCED_COMPILER_README.md](ENHANCED_COMPILER_README.md) for details
+
 ## Future Enhancements
 
-- Support for more languages (JavaScript, Ruby, Go, etc.)
+- ✅ **AI Code Analysis for C/C++** (Completed!)
+- ✅ **Enhanced C/C++ Compiler with Multiple Standards** (Completed!)
+- AI Code Analysis for Python, Java, and other languages
+- Support for more languages (JavaScript, Ruby, Go, Rust, etc.)
+- Machine learning-based bug prediction
 - Collaborative code editing
 - Code sharing via links
 - Syntax checking before upload
 - Code version history
 - Search functionality
 - Code comments and annotations
+- Real-time code analysis as you type
+- Integration with popular IDEs (VS Code, Vim, etc.)
 
 ## Support
 
