@@ -1527,6 +1527,168 @@ def create_folder(language):
         app.logger.error(f'Failed to create folder for {language}: {e}')
         return jsonify({'error': 'Failed to create folder'}), 500
 
+@app.route('/api/upload-standalone', methods=['POST'])
+def upload_standalone():
+    """
+    API endpoint for standalone upload page.
+    Accepts code upload, automatically detects language from filename,
+    creates directories if needed, updates metadata, and commits to GitHub.
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        code_content = data.get('code', '').strip()
+        language = data.get('language', '').strip()
+        filename = data.get('filename', '').strip()
+        
+        # Validate required fields
+        if not title or not code_content or not language or not filename:
+            return jsonify({'error': 'Title, code, language, and filename are required'}), 400
+        
+        # Validate language
+        if language not in LANGUAGES:
+            return jsonify({'error': f'Invalid language: {language}'}), 400
+        
+        # Validate filename
+        if '/' in filename or '\\' in filename or filename.startswith('.'):
+            return jsonify({'error': 'Invalid filename - cannot contain path separators'}), 400
+        
+        # Validate file extension matches language
+        expected_ext = LANGUAGES[language]['extension']
+        if not filename.endswith(expected_ext):
+            return jsonify({'error': f'Filename must end with {expected_ext} for {language}'}), 400
+        
+        # Create language directory if it doesn't exist
+        lang_dir = os.path.join(app.config['CODES_DIRECTORY'], language)
+        local_storage_available = True
+        try:
+            os.makedirs(lang_dir, exist_ok=True)
+            app.logger.info(f"Created/verified directory: {lang_dir}")
+        except OSError as e:
+            # If blob storage is enabled, we can continue without local storage
+            if BLOB_STORAGE_ENABLED and blob_client:
+                app.logger.warning(f"Local storage unavailable, using blob storage only: {str(e)}")
+                local_storage_available = False
+            else:
+                app.logger.error(f"Failed to create directory {lang_dir}: {str(e)}")
+                return jsonify({'error': 'Failed to create storage directory'}), 500
+        
+        # Load existing metadata
+        metadata = load_code_metadata(language)
+        
+        # Check if file already exists
+        filepath = os.path.join(lang_dir, filename)
+        file_exists = any(m['filename'] == filename for m in metadata)
+        
+        if file_exists:
+            return jsonify({'error': f'File {filename} already exists in {language} directory'}), 400
+        
+        # Save the file
+        blob_url = None
+        try:
+            # Save to local storage if available
+            if local_storage_available:
+                try:
+                    with open(filepath, 'w') as f:
+                        f.write(code_content)
+                    app.logger.info(f"Saved file to local storage: {filepath}")
+                except (OSError, PermissionError) as e:
+                    app.logger.warning(f"Cannot write to local file: {str(e)}")
+                    if not (BLOB_STORAGE_ENABLED and blob_client):
+                        raise
+            
+            # Save to blob storage if enabled
+            if BLOB_STORAGE_ENABLED and blob_client:
+                try:
+                    blob_pathname = f'stored_codes/{language}/{filename}'
+                    content_types = {
+                        'python': 'text/x-python',
+                        'java': 'text/x-java',
+                        'c': 'text/x-c',
+                        'cpp': 'text/x-c++',
+                        'html': 'text/html',
+                        'javascript': 'text/javascript',
+                        'typescript': 'text/typescript'
+                    }
+                    content_type = content_types.get(language, 'text/plain')
+                    
+                    result = blob_client.put(
+                        pathname=blob_pathname,
+                        content=code_content,
+                        content_type=content_type
+                    )
+                    blob_url = result.get('url')
+                    app.logger.info(f"Uploaded file to blob storage: {blob_pathname}")
+                except Exception as e:
+                    app.logger.error(f"Failed to upload to blob storage: {str(e)}")
+                    if not local_storage_available:
+                        return jsonify({'error': f'Failed to save file: {str(e)}'}), 500
+            elif not local_storage_available:
+                return jsonify({'error': 'No storage available'}), 500
+        
+        except Exception as e:
+            app.logger.error(f"Failed to save file: {str(e)}")
+            return jsonify({'error': f'Failed to save file: {str(e)}'}), 500
+        
+        # Add to metadata
+        code_info = {
+            'title': title,
+            'description': description,
+            'filename': filename,
+            'created_at': datetime.now().isoformat(),
+            'encrypted': False,
+            'is_secret': False
+        }
+        
+        if blob_url:
+            code_info['blob_url'] = blob_url
+        
+        metadata.append(code_info)
+        
+        # Save metadata
+        try:
+            save_code_metadata(language, metadata)
+            app.logger.info(f"Updated metadata for {language}")
+        except Exception as e:
+            app.logger.error(f"Failed to save metadata: {str(e)}")
+            return jsonify({'error': 'File saved but failed to save metadata'}), 500
+        
+        # Commit to GitHub if configured
+        github_committed = False
+        if GITHUB_ENABLED and GITHUB_TOKEN:
+            try:
+                # Commit the code file
+                github_file_path = f"stored_codes/{language}/{filename}"
+                commit_message = f"Add {language} file: {title} via standalone upload"
+                commit_file_to_github(github_file_path, code_content, commit_message)
+                
+                # Commit the metadata
+                commit_metadata_to_github(language, metadata)
+                
+                github_committed = True
+                app.logger.info(f"Successfully committed to GitHub: {github_file_path}")
+            except Exception as e:
+                app.logger.warning(f"File saved locally but GitHub commit failed: {str(e)}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Code uploaded successfully',
+            'filename': filename,
+            'language': language,
+            'directory': f'stored_codes/{language}/',
+            'github_committed': github_committed,
+            'metadata_updated': True
+        })
+    
+    except Exception as e:
+        app.logger.error(f"Unexpected error in upload_standalone: {str(e)}")
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+
 # Error handlers
 @app.errorhandler(413)
 def request_entity_too_large(error):

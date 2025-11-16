@@ -535,8 +535,15 @@
             <h1>💻 NeonBin - Matrix Code Vault</h1>
             <p class="subtitle">The ultimate code storage platform with neon aesthetics and advanced encryption</p>
             
+            <!-- Navigation Bar -->
+            <div style="text-align: center; margin-bottom: 20px; padding: 15px; background: rgba(0, 255, 0, 0.05); border-radius: 10px; border: 1px solid rgba(0, 255, 0, 0.2);">
+                <a href="upload_standalone.html" style="color: #00ff00; font-size: 1.2em; font-weight: 600; text-decoration: none; text-shadow: 0 0 10px rgba(0, 255, 0, 0.5); transition: all 0.3s;">
+                    📤 Upload Code
+                </a>
+            </div>
+            
             <div class="btn-group">
-                <button onclick="openUploadModal()" class="btn btn-primary">📤 Upload Code</button>
+                <button onclick="openUploadModal()" class="btn btn-primary">📤 Quick Upload (Modal)</button>
                 <button onclick="openNotesModal()" class="btn btn-primary">📝 Create Note</button>
                 <a href="viewer.html" class="btn btn-primary">🔐 Open Encrypted File Viewer</a>
                 <a href="https://github.com/shield44-project/pastebins" class="btn btn-secondary" target="_blank">📂 View on GitHub</a>
@@ -1556,34 +1563,64 @@ cd codes_storer_website</div>
         }
         
         function deleteCurrentFile() {
-            if (currentViewingFile && confirm('Are you sure you want to delete this file?')) {
-                deleteFile(currentViewingFile.id);
-                closeViewModal();
+            if (currentViewingFile) {
+                if (confirm('⚠️ Note: This is a local storage operation only.\n\nFor files stored in GitHub, please visit the repository to delete them.\n\nDelete this file from local storage?')) {
+                    deleteFile(currentViewingFile.id);
+                    closeViewModal();
+                }
             }
         }
         
         // Edit file function
         function editCurrentFile() {
             if (currentViewingFile) {
-                // Store reference before closing modal
-                const fileToEdit = currentViewingFile;
+                // Check if user wants to edit locally or on GitHub
+                const editChoice = confirm('✏️ Edit Options:\n\nClick OK to edit locally (modal)\nClick Cancel to be directed to edit on GitHub (recommended for synced files)');
                 
-                // Close view modal
-                closeViewModal();
-                
-                // Open upload modal with pre-filled data
-                document.getElementById('uploadModal').classList.add('active');
-                document.getElementById('language').value = fileToEdit.language;
-                document.getElementById('title').value = fileToEdit.title;
-                document.getElementById('description').value = fileToEdit.description || '';
-                document.getElementById('code').value = fileToEdit.code;
-                
-                // Switch to paste mode
-                switchUploadMethod('paste');
-                
-                // Store the current file ID for updating
-                document.getElementById('uploadForm').dataset.editingId = fileToEdit.id;
+                if (editChoice) {
+                    // Store reference before closing modal
+                    const fileToEdit = currentViewingFile;
+                    
+                    // Close view modal
+                    closeViewModal();
+                    
+                    // Open upload modal with pre-filled data
+                    document.getElementById('uploadModal').classList.add('active');
+                    document.getElementById('language').value = fileToEdit.language;
+                    document.getElementById('title').value = fileToEdit.title;
+                    document.getElementById('description').value = fileToEdit.description || '';
+                    document.getElementById('code').value = fileToEdit.code;
+                    
+                    // Switch to paste mode
+                    switchUploadMethod('paste');
+                    
+                    // Store the current file ID for updating
+                    document.getElementById('uploadForm').dataset.editingId = fileToEdit.id;
+                } else {
+                    // Redirect to GitHub (construct URL based on file info)
+                    const githubRepo = 'shield44-project/pastebins'; // Update this to your repo
+                    const githubBranch = 'main';
+                    const filename = currentViewingFile.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() + getExtensionForLanguage(currentViewingFile.language);
+                    const githubUrl = `https://github.com/${githubRepo}/edit/${githubBranch}/stored_codes/${currentViewingFile.language}/${filename}`;
+                    window.open(githubUrl, '_blank');
+                    showAlert('Opening GitHub editor in new tab...', 'success');
+                }
             }
+        }
+        
+        // Helper function to get file extension for language
+        function getExtensionForLanguage(language) {
+            const extensions = {
+                'python': '.py',
+                'java': '.java',
+                'c': '.c',
+                'cpp': '.cpp',
+                'javascript': '.js',
+                'typescript': '.ts',
+                'react': '.jsx',
+                'html': '.html'
+            };
+            return extensions[language] || '.txt';
         }
         
         // Display stored files
