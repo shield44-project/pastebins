@@ -46,6 +46,14 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 - File preview before upload
 - Drag-and-drop support (coming soon)
 
+### ☁️ Vercel Blob Storage Integration
+- **Persistent file storage for serverless deployments**
+- Automatic file synchronization to Vercel Blob
+- Files persist across deployments on Vercel
+- Graceful fallback to local storage
+- Works alongside GitHub integration
+- See [VERCEL_BLOB_SETUP.md](VERCEL_BLOB_SETUP.md) for setup guide
+
 ### 📝 Notes with Screenshots
 - **Create and store notes with rich text content**
 - **Attach multiple screenshots/images to notes**
@@ -137,6 +145,52 @@ pip install -r requirements.txt
 # Run the application
 python app.py
 ```
+
+## Configuration
+
+The application can be configured using environment variables:
+
+### Storage Configuration
+
+**`CODES_DIRECTORY`** (optional)
+- Directory for storing code files
+- Default: `stored_codes`
+- Example: `/tmp/stored_codes` (for serverless platforms)
+
+**`BLOB_READ_WRITE_TOKEN`** (optional, recommended for Vercel)
+- Vercel Blob Storage read-write token for persistent storage
+- Enables file persistence on serverless platforms
+- See [VERCEL_BLOB_SETUP.md](VERCEL_BLOB_SETUP.md) for setup
+- Example: `vercel_blob_rw_GmsSyO1ENI6nA5GJ_ETd7tIhY7RialiPNyz5YaP8U2EZTAZ`
+
+### GitHub Integration (optional)
+
+**`GITHUB_TOKEN`**
+- GitHub Personal Access Token for automatic commits
+- Requires `repo` scope
+- See [GITHUB_INTEGRATION_SETUP.md](GITHUB_INTEGRATION_SETUP.md)
+
+**`GITHUB_REPO`**
+- Target repository for commits
+- Default: `shield44-project/pastebins`
+
+**`GITHUB_BRANCH`**
+- Target branch for commits
+- Default: `main`
+
+### Flask Configuration
+
+**`FLASK_DEBUG`**
+- Enable debug mode (True/False)
+- Default: False (production)
+
+**`FLASK_HOST`**
+- Server host
+- Default: `0.0.0.0`
+
+**`FLASK_PORT`**
+- Server port
+- Default: `5000`
 
 ## Usage Guide
 
