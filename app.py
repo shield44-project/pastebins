@@ -946,7 +946,9 @@ def upload_code():
             encrypt = request.form.get('encrypt') == 'on'
             password = request.form.get('password', '')
             is_secret = request.form.get('is_secret') == 'on'
-            auto_commit_github = request.form.get('auto_commit_github') == 'on'
+            # Check which submit button was clicked
+            submit_action = request.form.get('submit_action', 'upload')
+            auto_commit_github = (submit_action == 'upload_github')
             
             if not language or language not in LANGUAGES:
                 return jsonify({'error': 'Invalid language'}), 400
@@ -1145,7 +1147,9 @@ def upload_files():
         encrypt = request.form.get('encrypt') == 'on'
         password = request.form.get('password', '')
         is_secret = request.form.get('is_secret') == 'on'
-        auto_commit_github = request.form.get('auto_commit_github') == 'on'
+        # Check which submit button was clicked
+        submit_action = request.form.get('submit_action', 'upload')
+        auto_commit_github = (submit_action == 'upload_github')
         
         if not language or language not in LANGUAGES:
             return jsonify({'error': 'Invalid language'}), 400
