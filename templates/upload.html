@@ -6,6 +6,12 @@
 <div class="upload-page">
     <h1>{% if edit_mode %}Edit Code{% else %}Upload New Code{% endif %}</h1>
     
+    {% if error %}
+    <div class="error-message">
+        <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+    
     {% if not edit_mode %}
     <!-- Tab navigation -->
     <div class="upload-tabs">
@@ -132,6 +138,21 @@
 </div>
 
 <style>
+.error-message {
+    background: #fee;
+    border: 1px solid #fcc;
+    border-left: 4px solid #f44;
+    color: #c33;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.error-message strong {
+    font-weight: 600;
+}
+
 .upload-tabs {
     display: flex;
     gap: 10px;

@@ -640,18 +640,33 @@ def edit_code(language, code_id):
     
     elif request.method == 'POST':
         # Update the code file
+        title = request.form.get('title')
+        description = request.form.get('description', '')
+        code_content = request.form.get('code')
+        
+        if not title or not code_content:
+            # Re-render form with error message
+            return render_template('upload.html', 
+                                 languages=LANGUAGES, 
+                                 edit_mode=True,
+                                 language=language,
+                                 code_id=code_id,
+                                 code_info=code_info,
+                                 code_content=code_content or '',
+                                 error='Title and code are required'), 400
+        
+        # Validate title to prevent path traversal
+        if '/' in title or '\\' in title or title.startswith('.'):
+            return render_template('upload.html', 
+                                 languages=LANGUAGES, 
+                                 edit_mode=True,
+                                 language=language,
+                                 code_id=code_id,
+                                 code_info=code_info,
+                                 code_content=code_content,
+                                 error='Invalid title - cannot contain path separators'), 400
+        
         try:
-            title = request.form.get('title')
-            description = request.form.get('description', '')
-            code_content = request.form.get('code')
-            
-            if not title or not code_content:
-                return jsonify({'error': 'Title and code are required'}), 400
-            
-            # Validate title to prevent path traversal
-            if '/' in title or '\\' in title or title.startswith('.'):
-                return jsonify({'error': 'Invalid title - cannot contain path separators'}), 400
-            
             # Update the code file
             code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
             
@@ -661,35 +676,73 @@ def edit_code(language, code_id):
                 safe_title = 'unnamed'
             new_filename = f"{safe_title}{LANGUAGES[language]['extension']}"
             
-            # If filename changed, rename the file
-            if new_filename != code_info['filename']:
+            # Track if we need to rename
+            needs_rename = new_filename != code_info['filename']
+            new_code_path = code_path
+            
+            # If filename changed, attempt to rename the file
+            if needs_rename:
                 new_code_path = os.path.join(app.config['CODES_DIRECTORY'], language, new_filename)
                 # Check if new filename already exists
                 if os.path.exists(new_code_path) and new_code_path != code_path:
-                    return jsonify({'error': 'A file with this name already exists'}), 400
-                # Rename the file
-                if os.path.exists(code_path):
-                    os.rename(code_path, new_code_path)
-                code_path = new_code_path
-                code_info['filename'] = new_filename
+                    return render_template('upload.html', 
+                                         languages=LANGUAGES, 
+                                         edit_mode=True,
+                                         language=language,
+                                         code_id=code_id,
+                                         code_info=code_info,
+                                         code_content=code_content,
+                                         error='A file with this name already exists'), 400
+                
+                # Try to rename the file
+                try:
+                    if os.path.exists(code_path):
+                        os.rename(code_path, new_code_path)
+                    code_path = new_code_path
+                    code_info['filename'] = new_filename
+                except (OSError, PermissionError) as e:
+                    # If rename fails due to read-only filesystem, just update the title in metadata
+                    # but keep the original filename
+                    app.logger.warning(f"Cannot rename file (read-only filesystem?): {str(e)}")
+                    # Continue with the original filename but update the title
+                    new_code_path = code_path
+                    # Don't update filename in metadata
             
             # Write the updated content
-            with open(code_path, 'w') as f:
-                f.write(code_content)
+            try:
+                with open(code_path, 'w') as f:
+                    f.write(code_content)
+            except (OSError, PermissionError) as e:
+                # File system is read-only, cannot update file content
+                app.logger.error(f"Cannot write to file (read-only filesystem): {str(e)}")
+                return render_template('upload.html', 
+                                     languages=LANGUAGES, 
+                                     edit_mode=True,
+                                     language=language,
+                                     code_id=code_id,
+                                     code_info=code_info,
+                                     code_content=code_content,
+                                     error='Cannot update file: The file system is read-only. Please contact the administrator.'), 500
             
-            # Update metadata
+            # Update metadata (title and description can always be updated)
             code_info['title'] = title
             code_info['description'] = description
             code_info['modified_at'] = datetime.now().isoformat()
             
             metadata[code_id] = code_info
-            save_code_metadata(language, metadata)
+            
+            # Try to save metadata
+            try:
+                save_code_metadata(language, metadata)
+            except (OSError, PermissionError) as e:
+                app.logger.warning(f"Cannot save metadata (read-only filesystem): {str(e)}")
+                # If we can't save metadata, at least the file content was updated
             
             # Commit to GitHub if configured
             if GITHUB_ENABLED and GITHUB_TOKEN:
                 try:
-                    # Commit the updated code file
-                    github_file_path = f"stored_codes/{language}/{new_filename}"
+                    # Use the actual filename (might be old if rename failed)
+                    github_file_path = f"stored_codes/{language}/{code_info['filename']}"
                     commit_message = f"Update {language} file: {title} via web edit"
                     commit_file_to_github(github_file_path, code_content, commit_message)
                     
@@ -702,9 +755,36 @@ def edit_code(language, code_id):
             
             return redirect(url_for('view_code', language=language, code_id=code_id))
         
+        except PermissionError as e:
+            app.logger.error(f"Permission error updating code: {str(e)}")
+            return render_template('upload.html', 
+                                 languages=LANGUAGES, 
+                                 edit_mode=True,
+                                 language=language,
+                                 code_id=code_id,
+                                 code_info=code_info,
+                                 code_content=code_content,
+                                 error='Permission denied - cannot write file. The file system may be read-only.'), 500
+        except IOError as e:
+            app.logger.error(f"I/O error updating code: {str(e)}")
+            return render_template('upload.html', 
+                                 languages=LANGUAGES, 
+                                 edit_mode=True,
+                                 language=language,
+                                 code_id=code_id,
+                                 code_info=code_info,
+                                 code_content=code_content,
+                                 error=f'Failed to save file: {str(e)}'), 500
         except Exception as e:
             app.logger.error(f"Failed to update code: {str(e)}")
-            return jsonify({'error': 'Failed to update code'}), 500
+            return render_template('upload.html', 
+                                 languages=LANGUAGES, 
+                                 edit_mode=True,
+                                 language=language,
+                                 code_id=code_id,
+                                 code_info=code_info,
+                                 code_content=code_content,
+                                 error=f'Failed to update code: {str(e)}'), 500
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_code():
