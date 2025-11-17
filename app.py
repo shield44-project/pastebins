@@ -30,6 +30,14 @@ from code_analyzer import CodeAnalyzer, analyze_code, get_analysis_report
 # Import notes storage
 from notes_storage import get_notes_storage, is_kv_enabled
 
+# Import Docker executor
+try:
+    from docker_executor import get_docker_executor, execute_code_docker
+    DOCKER_EXECUTOR_AVAILABLE = True
+except ImportError:
+    DOCKER_EXECUTOR_AVAILABLE = False
+    app.logger.warning("Docker executor not available")
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
@@ -2131,6 +2139,100 @@ def delete_note(note_id):
     except Exception as e:
         app.logger.error(f"Failed to delete note: {str(e)}")
         return jsonify({'error': 'Failed to delete note'}), 500
+
+# ==================== Docker Code Execution API ====================
+
+@app.route('/api/execute', methods=['POST'])
+def api_execute_code():
+    """
+    API endpoint for secure Docker-based code execution.
+    
+    Request body (JSON):
+        {
+            "language": "c" | "cpp" | "python",
+            "code": "source code string",
+            "input": "optional stdin input"
+        }
+    
+    Response (JSON):
+        {
+            "success": true | false,
+            "stdout": "program output",
+            "stderr": "error messages",
+            "compile_errors": "compilation errors (for C/C++)",
+            "execution_time": 0.123
+        }
+    """
+    if not request.is_json:
+        return jsonify({
+            'success': False,
+            'error': 'Request must be JSON',
+            'stdout': '',
+            'stderr': '',
+            'compile_errors': ''
+        }), 400
+    
+    data = request.get_json()
+    
+    # Validate required fields
+    language = data.get('language', '').lower()
+    code = data.get('code', '')
+    stdin_input = data.get('input', '')
+    
+    if not language:
+        return jsonify({
+            'success': False,
+            'error': 'Missing required field: language',
+            'stdout': '',
+            'stderr': '',
+            'compile_errors': ''
+        }), 400
+    
+    if not code:
+        return jsonify({
+            'success': False,
+            'error': 'Missing required field: code',
+            'stdout': '',
+            'stderr': '',
+            'compile_errors': ''
+        }), 400
+    
+    # Validate language
+    supported_languages = ['c', 'cpp', 'python']
+    if language not in supported_languages:
+        return jsonify({
+            'success': False,
+            'error': f'Unsupported language: {language}. Supported: {", ".join(supported_languages)}',
+            'stdout': '',
+            'stderr': '',
+            'compile_errors': ''
+        }), 400
+    
+    # Check if Docker executor is available
+    if not DOCKER_EXECUTOR_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'Docker executor not available',
+            'stdout': '',
+            'stderr': 'Docker executor module not loaded',
+            'compile_errors': ''
+        }), 503
+    
+    try:
+        # Execute code using Docker
+        result = execute_code_docker(language, code, stdin_input)
+        return jsonify(result)
+    
+    except Exception as e:
+        app.logger.error(f"Docker execution error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Internal execution error',
+            'stdout': '',
+            'stderr': str(e),
+            'compile_errors': '',
+            'execution_time': 0
+        }), 500
 
 # ==================== Error Handlers ====================
 

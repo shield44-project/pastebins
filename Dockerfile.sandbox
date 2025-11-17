@@ -1,0 +1,34 @@
+# Dockerfile for secure code execution sandbox
+# Supports C, C++, and Python3 with security constraints
+
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install required compilers and interpreters
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for code execution
+RUN useradd -m -u 1000 sandbox && \
+    mkdir -p /sandbox && \
+    chown sandbox:sandbox /sandbox
+
+# Set working directory
+WORKDIR /sandbox
+
+# Switch to non-root user
+USER sandbox
+
+# Set resource limits via ulimit (backup, primary limits set via docker run)
+# These are for defense in depth
+RUN echo "ulimit -t 2" >> ~/.bashrc && \
+    echo "ulimit -v 262144" >> ~/.bashrc
+
+# Default command
+CMD ["/bin/bash"]
