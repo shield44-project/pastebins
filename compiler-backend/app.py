@@ -202,7 +202,8 @@ def compile_and_run_c(code, input_data):
         
         # Try each strategy until one succeeds
         for strategy in strategies:
-            compile_cmd = ['clang', '-o', executable_file, source_file] + strategy['flags']
+            # Build command with flags first, then input file, then -o and output file
+            compile_cmd = ['clang'] + strategy['flags'] + [source_file, '-o', executable_file]
             stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
             
             compilation_attempts.append({
@@ -416,7 +417,8 @@ def compile_and_run_cpp(code, input_data):
         
         # Try each strategy until one succeeds
         for strategy in strategies:
-            compile_cmd = ['clang++', '-o', executable_file, source_file] + strategy['flags']
+            # Build command with flags first, then input file, then -o and output file
+            compile_cmd = ['clang++'] + strategy['flags'] + [source_file, '-o', executable_file]
             stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
             
             compilation_attempts.append({
