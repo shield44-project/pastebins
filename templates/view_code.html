@@ -410,6 +410,76 @@
 .image-preview-remove:hover {
     background: rgba(255, 0, 0, 1);
 }
+
+/* Practice Problems Styles */
+.practice-problem {
+    background: rgba(0, 100, 150, 0.1);
+    border: 1px solid rgba(0, 150, 200, 0.3);
+    border-radius: 8px;
+    margin: 15px 0;
+    overflow: hidden;
+}
+
+.practice-problem-header {
+    padding: 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 100, 150, 0.15);
+    transition: background 0.3s;
+}
+
+.practice-problem-header:hover {
+    background: rgba(0, 150, 200, 0.2);
+}
+
+.practice-problem-header h5 {
+    color: #00d9ff;
+    margin: 0;
+    font-size: 1.1em;
+}
+
+.toggle-icon {
+    color: #00d9ff;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.practice-problem-content {
+    padding: 20px;
+    border-top: 1px solid rgba(0, 150, 200, 0.3);
+}
+
+.practice-problem-content p {
+    color: #b0b0b0;
+    margin: 10px 0;
+}
+
+.practice-problem-content pre {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.difficulty-easy {
+    color: #4dff4d;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.difficulty-medium {
+    color: #ffa500;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.difficulty-hard {
+    color: #ff4444;
+    font-size: 0.9em;
+    font-weight: bold;
+}
 </style>
 {% endblock %}
 
@@ -550,6 +620,20 @@
         return div.innerHTML;
     }
 
+    // Toggle practice problem visibility
+    function toggleProblem(index) {
+        const content = document.getElementById('problem-' + index);
+        const icon = document.getElementById('toggle-' + index);
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.textContent = '▲';
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '▼';
+        }
+    }
+
     // Delete code functionality (only used when GitHub integration is not available)
     const deleteBtn = document.getElementById('delete-code');
     if (deleteBtn) {
@@ -673,6 +757,33 @@
                                 html += '<pre style="color: #4dff4d; margin: 5px 0; white-space: pre-wrap; word-wrap: break-word;">' + escapeHtml(alt.recommended_code) + '</pre>';
                                 html += '</div>';
                             }
+                            html += '</div>';
+                        });
+                    }
+                    
+                    // Practice Problems
+                    if (analysis.practice_problems && analysis.practice_problems.length > 0) {
+                        html += '<h4>📚 Practice Problems (Learn by Doing!)</h4>';
+                        html += '<p style="color: #b0b0b0; margin-bottom: 15px;">Here are 5 similar problems to help you master these concepts:</p>';
+                        
+                        analysis.practice_problems.forEach((problem, idx) => {
+                            html += '<div class="practice-problem">';
+                            html += '<div class="practice-problem-header" onclick="toggleProblem(' + idx + ')">';
+                            html += '<h5>📝 ' + escapeHtml(problem.title) + ' <span class="difficulty-' + problem.difficulty.toLowerCase() + '">[' + problem.difficulty + ']</span></h5>';
+                            html += '<span class="toggle-icon" id="toggle-' + idx + '">▼</span>';
+                            html += '</div>';
+                            html += '<div class="practice-problem-content" id="problem-' + idx + '" style="display: none;">';
+                            html += '<p><strong>Description:</strong> ' + escapeHtml(problem.description) + '</p>';
+                            html += '<div style="margin-top: 10px; padding: 15px; background: rgba(0, 100, 0, 0.2); border: 1px solid rgba(0, 255, 0, 0.3); border-radius: 4px;">';
+                            html += '<p><strong>✅ Complete Solution:</strong></p>';
+                            html += '<pre style="color: #4dff4d; margin: 10px 0; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.4;">' + escapeHtml(problem.solution) + '</pre>';
+                            html += '</div>';
+                            if (problem.explanation) {
+                                html += '<div style="margin-top: 10px; padding: 10px; background: rgba(0, 0, 100, 0.2); border-left: 3px solid #17a2b8;">';
+                                html += '<p><strong>💡 Explanation:</strong> ' + escapeHtml(problem.explanation) + '</p>';
+                                html += '</div>';
+                            }
+                            html += '</div>';
                             html += '</div>';
                         });
                     }

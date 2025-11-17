@@ -42,10 +42,14 @@ class CodeAnalyzer:
         self._suggest_optimizations(code, language)
         self._suggest_alternatives(code, language)
         
+        # Generate practice problems and complete code examples
+        practice_problems = self._generate_practice_problems(code, language)
+        
         return {
             'issues': self.issues,
             'suggestions': self.suggestions,
             'alternatives': self.alternatives,
+            'practice_problems': practice_problems,
             'summary': self._generate_summary()
         }
     
@@ -629,6 +633,525 @@ std::string dest = src; // Automatic memory management'''
             'suggestions': len(self.suggestions),
             'alternatives': len(self.alternatives)
         }
+    
+    def _generate_practice_problems(self, code: str, language: str) -> List[Dict]:
+        """
+        Generate 5 similar practice problems based on the analyzed code.
+        Each problem includes a complete working solution.
+        """
+        problems = []
+        
+        # Detect what the code is doing
+        has_arrays = bool(re.search(r'\w+\s*\[\s*\d+\s*\]', code))
+        has_loops = 'for' in code or 'while' in code
+        has_input = 'scanf' in code or 'cin' in code or 'input' in code
+        has_output = 'printf' in code or 'cout' in code or 'print' in code
+        has_pointers = '*' in code and language in ['c', 'cpp']
+        has_strings = 'char' in code or 'string' in code
+        has_math = any(op in code for op in ['+', '-', '*', '/', '%'])
+        
+        # Problem templates based on code characteristics
+        if has_arrays and has_loops:
+            problems.extend(self._generate_array_problems(language))
+        
+        if has_strings:
+            problems.extend(self._generate_string_problems(language))
+        
+        if has_pointers and language in ['c', 'cpp']:
+            problems.extend(self._generate_pointer_problems(language))
+        
+        if has_math:
+            problems.extend(self._generate_math_problems(language))
+        
+        # Always add some fundamental problems
+        if len(problems) < 5:
+            problems.extend(self._generate_fundamental_problems(language))
+        
+        # Return exactly 5 problems
+        return problems[:5]
+    
+    def _generate_array_problems(self, language: str) -> List[Dict]:
+        """Generate array-related practice problems."""
+        problems = []
+        
+        if language == 'c':
+            problems.append({
+                'title': 'Problem 1: Find Maximum Element in Array',
+                'description': 'Write a program to find and print the maximum element in an array of integers.',
+                'difficulty': 'Easy',
+                'solution': '''#include <stdio.h>
+
+int main() {
+    int arr[] = {23, 45, 12, 67, 34, 89, 21};
+    int n = sizeof(arr) / sizeof(arr[0]);
+    int max = arr[0];
+    
+    // Find maximum
+    for (int i = 1; i < n; i++) {
+        if (arr[i] > max) {
+            max = arr[i];
+        }
+    }
+    
+    printf("Maximum element: %d\\n", max);
+    return 0;
+}''',
+                'explanation': 'This solution iterates through the array once, comparing each element with the current maximum and updating it when a larger value is found. Time complexity: O(n).'
+            })
+            
+            problems.append({
+                'title': 'Problem 2: Reverse an Array',
+                'description': 'Write a program to reverse an array in-place without using extra space.',
+                'difficulty': 'Easy',
+                'solution': '''#include <stdio.h>
+
+void reverseArray(int arr[], int n) {
+    int start = 0;
+    int end = n - 1;
+    
+    while (start < end) {
+        // Swap elements
+        int temp = arr[start];
+        arr[start] = arr[end];
+        arr[end] = temp;
+        start++;
+        end--;
+    }
+}
+
+int main() {
+    int arr[] = {1, 2, 3, 4, 5};
+    int n = sizeof(arr) / sizeof(arr[0]);
+    
+    printf("Original array: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", arr[i]);
+    }
+    
+    reverseArray(arr, n);
+    
+    printf("\\nReversed array: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", arr[i]);
+    }
+    printf("\\n");
+    
+    return 0;
+}''',
+                'explanation': 'Uses two-pointer approach: one starting from beginning and one from end. Swaps elements and moves pointers inward until they meet. Time: O(n), Space: O(1).'
+            })
+        
+        elif language == 'cpp':
+            problems.append({
+                'title': 'Problem 1: Find Maximum Element Using STL',
+                'description': 'Use C++ STL to find the maximum element in a vector.',
+                'difficulty': 'Easy',
+                'solution': '''#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+int main() {
+    vector<int> arr = {23, 45, 12, 67, 34, 89, 21};
+    
+    // Using STL algorithm
+    int max = *max_element(arr.begin(), arr.end());
+    
+    cout << "Maximum element: " << max << endl;
+    
+    // Alternative: using iterators
+    int maxValue = arr[0];
+    for (const auto& num : arr) {
+        if (num > maxValue) {
+            maxValue = num;
+        }
+    }
+    cout << "Maximum (manual): " << maxValue << endl;
+    
+    return 0;
+}''',
+                'explanation': 'Demonstrates both STL max_element() function and manual iteration using range-based for loop. STL version is more concise and idiomatic C++.'
+            })
+            
+            problems.append({
+                'title': 'Problem 2: Vector Operations and Sorting',
+                'description': 'Create a program that performs various operations on a vector including sorting, searching, and filtering.',
+                'difficulty': 'Medium',
+                'solution': '''#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+int main() {
+    vector<int> numbers = {64, 34, 25, 12, 22, 11, 90};
+    
+    // Sort the vector
+    sort(numbers.begin(), numbers.end());
+    
+    cout << "Sorted array: ";
+    for (int num : numbers) {
+        cout << num << " ";
+    }
+    cout << endl;
+    
+    // Binary search (only works on sorted array)
+    int target = 25;
+    bool found = binary_search(numbers.begin(), numbers.end(), target);
+    cout << "Is " << target << " present? " << (found ? "Yes" : "No") << endl;
+    
+    // Filter even numbers
+    vector<int> evens;
+    copy_if(numbers.begin(), numbers.end(), back_inserter(evens),
+            [](int n) { return n % 2 == 0; });
+    
+    cout << "Even numbers: ";
+    for (int num : evens) {
+        cout << num << " ";
+    }
+    cout << endl;
+    
+    return 0;
+}''',
+                'explanation': 'Showcases modern C++ features: STL algorithms (sort, binary_search, copy_if), lambda functions, and range-based loops for clean, efficient code.'
+            })
+        
+        return problems
+    
+    def _generate_string_problems(self, language: str) -> List[Dict]:
+        """Generate string-related practice problems."""
+        problems = []
+        
+        if language == 'c':
+            problems.append({
+                'title': 'Problem 3: Check Palindrome String',
+                'description': 'Write a program to check if a given string is a palindrome.',
+                'difficulty': 'Easy',
+                'solution': '''#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+int isPalindrome(char str[]) {
+    int left = 0;
+    int right = strlen(str) - 1;
+    
+    while (left < right) {
+        // Skip non-alphanumeric characters
+        while (left < right && !isalnum(str[left])) left++;
+        while (left < right && !isalnum(str[right])) right--;
+        
+        // Compare characters (case-insensitive)
+        if (tolower(str[left]) != tolower(str[right])) {
+            return 0; // Not a palindrome
+        }
+        left++;
+        right--;
+    }
+    return 1; // Is a palindrome
+}
+
+int main() {
+    char str1[] = "A man, a plan, a canal: Panama";
+    char str2[] = "race a car";
+    
+    printf("\\"%s\\" is %s\\n", str1, 
+           isPalindrome(str1) ? "a palindrome" : "not a palindrome");
+    printf("\\"%s\\" is %s\\n", str2, 
+           isPalindrome(str2) ? "a palindrome" : "not a palindrome");
+    
+    return 0;
+}''',
+                'explanation': 'Two-pointer technique comparing characters from both ends. Handles spaces and punctuation by skipping non-alphanumeric characters. Case-insensitive comparison using tolower().'
+            })
+        
+        elif language == 'cpp':
+            problems.append({
+                'title': 'Problem 3: String Manipulation with STL',
+                'description': 'Demonstrate various string operations using C++ string class and algorithms.',
+                'difficulty': 'Medium',
+                'solution': '''#include <iostream>
+#include <string>
+#include <algorithm>
+#include <cctype>
+
+using namespace std;
+
+int main() {
+    string text = "Hello, World! C++ Programming is FUN!";
+    
+    // Convert to uppercase
+    string upper = text;
+    transform(upper.begin(), upper.end(), upper.begin(), ::toupper);
+    cout << "Uppercase: " << upper << endl;
+    
+    // Count vowels
+    int vowelCount = count_if(text.begin(), text.end(), [](char c) {
+        c = tolower(c);
+        return c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u';
+    });
+    cout << "Vowel count: " << vowelCount << endl;
+    
+    // Reverse string
+    string reversed = text;
+    reverse(reversed.begin(), reversed.end());
+    cout << "Reversed: " << reversed << endl;
+    
+    // Find and replace
+    string modified = text;
+    size_t pos = modified.find("World");
+    if (pos != string::npos) {
+        modified.replace(pos, 5, "C++");
+    }
+    cout << "Modified: " << modified << endl;
+    
+    return 0;
+}''',
+                'explanation': 'Demonstrates STL algorithms (transform, count_if, reverse, find, replace) with lambda functions for powerful string manipulation in modern C++.'
+            })
+        
+        return problems
+    
+    def _generate_pointer_problems(self, language: str) -> List[Dict]:
+        """Generate pointer-related practice problems."""
+        problems = []
+        
+        if language == 'cpp':
+            problems.append({
+                'title': 'Problem 4: Smart Pointers and Memory Management',
+                'description': 'Use smart pointers to manage dynamic memory safely without manual delete.',
+                'difficulty': 'Medium',
+                'solution': '''#include <iostream>
+#include <memory>
+#include <vector>
+
+using namespace std;
+
+class Student {
+public:
+    string name;
+    int age;
+    
+    Student(string n, int a) : name(n), age(a) {
+        cout << "Student " << name << " created" << endl;
+    }
+    
+    ~Student() {
+        cout << "Student " << name << " destroyed" << endl;
+    }
+    
+    void display() {
+        cout << "Name: " << name << ", Age: " << age << endl;
+    }
+};
+
+int main() {
+    // unique_ptr - exclusive ownership
+    auto student1 = make_unique<Student>("Alice", 20);
+    student1->display();
+    
+    // shared_ptr - shared ownership
+    auto student2 = make_shared<Student>("Bob", 22);
+    {
+        auto student3 = student2; // Shared ownership
+        cout << "Reference count: " << student2.use_count() << endl;
+    }
+    cout << "Reference count after scope: " << student2.use_count() << endl;
+    
+    // Vector of smart pointers
+    vector<unique_ptr<Student>> students;
+    students.push_back(make_unique<Student>("Charlie", 21));
+    students.push_back(make_unique<Student>("David", 23));
+    
+    cout << "\\nAll students:" << endl;
+    for (const auto& s : students) {
+        s->display();
+    }
+    
+    // Automatic cleanup - no delete needed!
+    return 0;
+}''',
+                'explanation': 'Shows proper use of unique_ptr (exclusive ownership) and shared_ptr (shared ownership) for automatic memory management. No manual delete needed - RAII principle in action.'
+            })
+        
+        return problems
+    
+    def _generate_math_problems(self, language: str) -> List[Dict]:
+        """Generate math-related practice problems."""
+        problems = []
+        
+        problem = {
+            'title': 'Problem 5: Calculate Factorial with Recursion and Iteration',
+            'description': 'Implement both recursive and iterative approaches to calculate factorial.',
+            'difficulty': 'Easy'
+        }
+        
+        if language == 'c':
+            problem['solution'] = '''#include <stdio.h>
+
+// Recursive approach
+long long factorialRecursive(int n) {
+    if (n <= 1) return 1;
+    return n * factorialRecursive(n - 1);
+}
+
+// Iterative approach (more efficient)
+long long factorialIterative(int n) {
+    long long result = 1;
+    for (int i = 2; i <= n; i++) {
+        result *= i;
+    }
+    return result;
+}
+
+int main() {
+    int n = 10;
+    
+    printf("Factorial of %d (recursive): %lld\\n", n, factorialRecursive(n));
+    printf("Factorial of %d (iterative): %lld\\n", n, factorialIterative(n));
+    
+    // Calculate factorial of multiple numbers
+    printf("\\nFactorial table:\\n");
+    for (int i = 1; i <= 10; i++) {
+        printf("%d! = %lld\\n", i, factorialIterative(i));
+    }
+    
+    return 0;
+}'''
+        else:  # cpp
+            problem['solution'] = '''#include <iostream>
+
+using namespace std;
+
+// Recursive approach
+long long factorialRecursive(int n) {
+    if (n <= 1) return 1;
+    return n * factorialRecursive(n - 1);
+}
+
+// Iterative approach
+long long factorialIterative(int n) {
+    long long result = 1;
+    for (int i = 2; i <= n; i++) {
+        result *= i;
+    }
+    return result;
+}
+
+// Template version for any numeric type
+template<typename T>
+T factorial(T n) {
+    T result = 1;
+    for (T i = 2; i <= n; i++) {
+        result *= i;
+    }
+    return result;
+}
+
+int main() {
+    int n = 10;
+    
+    cout << "Factorial of " << n << " (recursive): " 
+         << factorialRecursive(n) << endl;
+    cout << "Factorial of " << n << " (iterative): " 
+         << factorialIterative(n) << endl;
+    
+    // Using template version
+    cout << "Factorial of " << n << " (template): " 
+         << factorial(n) << endl;
+    
+    // Factorial table
+    cout << "\\nFactorial table:" << endl;
+    for (int i = 1; i <= 10; i++) {
+        cout << i << "! = " << factorialIterative(i) << endl;
+    }
+    
+    return 0;
+}'''
+        
+        problem['explanation'] = 'Compares recursive vs iterative factorial. Recursive is elegant but uses more memory (stack). Iterative is more efficient. Template version shows C++ generic programming.'
+        problems.append(problem)
+        
+        return problems
+    
+    def _generate_fundamental_problems(self, language: str) -> List[Dict]:
+        """Generate fundamental programming problems."""
+        problems = []
+        
+        if language == 'c':
+            problems.append({
+                'title': 'Problem: Sum of N Natural Numbers',
+                'description': 'Calculate the sum of first N natural numbers using formula and loop.',
+                'difficulty': 'Easy',
+                'solution': '''#include <stdio.h>
+
+int main() {
+    int n = 100;
+    
+    // Method 1: Using formula n*(n+1)/2
+    long long sum1 = (long long)n * (n + 1) / 2;
+    printf("Sum using formula: %lld\\n", sum1);
+    
+    // Method 2: Using loop
+    long long sum2 = 0;
+    for (int i = 1; i <= n; i++) {
+        sum2 += i;
+    }
+    printf("Sum using loop: %lld\\n", sum2);
+    
+    // Both should give same result
+    printf("Results match: %s\\n", (sum1 == sum2) ? "Yes" : "No");
+    
+    return 0;
+}''',
+                'explanation': 'Formula method is O(1) constant time, while loop is O(n). For large n, formula is much faster. Demonstrates importance of choosing right algorithm.'
+            })
+        else:  # cpp
+            problems.append({
+                'title': 'Problem: Prime Number Checker with Optimization',
+                'description': 'Check if a number is prime using optimized algorithm.',
+                'difficulty': 'Easy',
+                'solution': '''#include <iostream>
+#include <cmath>
+
+using namespace std;
+
+bool isPrime(int n) {
+    if (n <= 1) return false;
+    if (n <= 3) return true;
+    if (n % 2 == 0 || n % 3 == 0) return false;
+    
+    // Check divisors up to sqrt(n)
+    for (int i = 5; i * i <= n; i += 6) {
+        if (n % i == 0 || n % (i + 2) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int main() {
+    int limit = 100;
+    
+    cout << "Prime numbers up to " << limit << ":" << endl;
+    
+    int count = 0;
+    for (int i = 2; i <= limit; i++) {
+        if (isPrime(i)) {
+            cout << i << " ";
+            count++;
+            if (count % 10 == 0) cout << endl;
+        }
+    }
+    
+    cout << "\\nTotal primes: " << count << endl;
+    
+    return 0;
+}''',
+                'explanation': 'Optimized prime checking: skip even numbers, check only up to sqrt(n), and use 6k±1 pattern. Reduces time complexity significantly for large numbers.'
+            })
+        
+        return problems
     
     def format_analysis_report(self, analysis: Dict) -> str:
         """
