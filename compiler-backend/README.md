@@ -5,10 +5,12 @@ Production-ready backend service for compiling and executing C, C++, and Python 
 ## 🚀 Features
 
 - **Intelligent Compilation**: Tries multiple compiler strategies until code runs
-- **Zero Warnings**: Automatically suppresses all warnings
+- **Clang/Clang++ Compiler**: Uses clang for better C++20/C++23 support
+- **Zero Warnings**: Automatically suppresses all warnings (where needed)
 - **Security**: Non-root container user, random temp files, timeout limits
 - **Multi-Language**: Supports C, C++, and Python
-- **Auto-Retry**: 8+ strategies for C, 10+ for C++
+- **Auto-Retry**: 8+ strategies for C, 16+ for C++
+- **Modern C++ Standards**: Full support for C++17, C++20, and C++23
 
 ## 🏗️ Deployment
 
@@ -135,8 +137,8 @@ Execute code.
 
 ## 🎯 Compiler Strategies
 
-### C Compilation
-1. Modern C11
+### C Compilation (using clang)
+1. Modern C11 with optimizations (-O2, -Wall)
 2. Permissive C11 (warnings off)
 3. GNU C11 with extensions
 4. C99 fallback
@@ -145,22 +147,23 @@ Execute code.
 7. Maximum permissive mode
 8. Default compiler behavior
 
-### C++ Compilation
-1. Modern C++23
-2. Permissive C++23 (warnings off)
-3. Modern C++20
-4. Permissive C++20 (warnings off)
-5. Modern C++17
+### C++ Compilation (using clang++ with libc++)
+1. Modern C++23 with optimizations (-O2, -Wall, -stdlib=libc++)
+2. Permissive C++23 (warnings off, -stdlib=libc++)
+3. Modern C++20 with optimizations (-O2, -Wall, -stdlib=libc++)
+4. Permissive C++20 (warnings off, -stdlib=libc++)
+5. Modern C++17 with optimizations (-O2, -Wall)
 6. Permissive C++17 (warnings off)
 7. C++14 standard
 8. C++11 standard
-9. GNU C++23 with extensions
-10. GNU C++20 with extensions
+9. GNU C++23 with extensions (-stdlib=libc++)
+10. GNU C++20 with extensions (-stdlib=libc++)
 11. GNU C++17 with extensions
 12. GNU C++14 with extensions
 13. GNU C++11 with extensions
 14. Maximum permissive mode
 15. Legacy C++98
+16. Default compiler behavior
 16. Default compiler behavior
 
 ## 📝 Environment Variables
@@ -187,6 +190,7 @@ Execute code.
 - Python 3.11+
 - Flask 3.0.0
 - flask-cors 4.0.0
-- gcc (GNU C compiler)
-- g++ (GNU C++ compiler)
+- clang (C compiler with C11 support)
+- clang++ (C++ compiler with C++17/20/23 support)
+- libc++ (LLVM C++ standard library for modern C++ features)
 - python3 (Python interpreter)

@@ -98,12 +98,13 @@ def get_c_compiler_strategies():
     """
     Get list of compiler flag strategies to try for C code.
     Ordered from most strict to most permissive.
+    Uses clang for better compatibility.
     """
     return [
         {
             'name': 'Modern C11',
-            'flags': ['-std=c11', '-lm'],
-            'description': 'C11 standard'
+            'flags': ['-std=c11', '-O2', '-Wall', '-lm'],
+            'description': 'C11 standard with optimizations'
         },
         {
             'name': 'Permissive C11',
@@ -201,7 +202,7 @@ def compile_and_run_c(code, input_data):
         
         # Try each strategy until one succeeds
         for strategy in strategies:
-            compile_cmd = ['gcc', '-o', executable_file, source_file] + strategy['flags']
+            compile_cmd = ['clang', '-o', executable_file, source_file] + strategy['flags']
             stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
             
             compilation_attempts.append({
@@ -267,33 +268,33 @@ def get_cpp_compiler_strategies():
     """
     Get list of compiler flag strategies to try for C++ code.
     Ordered from most strict to most permissive.
-    Now includes C++20 and C++23 support!
+    Uses clang++ with libc++ for C++20 and C++23 support.
     """
     return [
         {
             'name': 'Modern C++23',
-            'flags': ['-std=c++23', '-lm'],
-            'description': 'C++23 standard'
+            'flags': ['-std=c++23', '-O2', '-Wall', '-stdlib=libc++', '-lm'],
+            'description': 'C++23 standard with optimizations'
         },
         {
             'name': 'Permissive C++23',
-            'flags': ['-std=c++23', '-lm', '-w'],
+            'flags': ['-std=c++23', '-stdlib=libc++', '-lm', '-w'],
             'description': 'C++23 with all warnings suppressed'
         },
         {
             'name': 'Modern C++20',
-            'flags': ['-std=c++20', '-lm'],
-            'description': 'C++20 standard'
+            'flags': ['-std=c++20', '-O2', '-Wall', '-stdlib=libc++', '-lm'],
+            'description': 'C++20 standard with optimizations'
         },
         {
             'name': 'Permissive C++20',
-            'flags': ['-std=c++20', '-lm', '-w'],
+            'flags': ['-std=c++20', '-stdlib=libc++', '-lm', '-w'],
             'description': 'C++20 with all warnings suppressed'
         },
         {
             'name': 'Modern C++17',
-            'flags': ['-std=c++17', '-lm'],
-            'description': 'C++17 standard'
+            'flags': ['-std=c++17', '-O2', '-Wall', '-lm'],
+            'description': 'C++17 standard with optimizations'
         },
         {
             'name': 'Permissive C++17',
@@ -312,12 +313,12 @@ def get_cpp_compiler_strategies():
         },
         {
             'name': 'GNU C++23 extensions',
-            'flags': ['-std=gnu++23', '-lm', '-w'],
+            'flags': ['-std=gnu++23', '-stdlib=libc++', '-lm', '-w'],
             'description': 'GNU C++23 with extensions'
         },
         {
             'name': 'GNU C++20 extensions',
-            'flags': ['-std=gnu++20', '-lm', '-w'],
+            'flags': ['-std=gnu++20', '-stdlib=libc++', '-lm', '-w'],
             'description': 'GNU C++20 with extensions'
         },
         {
@@ -415,7 +416,7 @@ def compile_and_run_cpp(code, input_data):
         
         # Try each strategy until one succeeds
         for strategy in strategies:
-            compile_cmd = ['g++', '-o', executable_file, source_file] + strategy['flags']
+            compile_cmd = ['clang++', '-o', executable_file, source_file] + strategy['flags']
             stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
             
             compilation_attempts.append({

@@ -5,8 +5,9 @@ FROM python:3.11-slim AS base
 
 # Install compilers and build tools
 RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
+    clang \
+    libc++-dev \
+    libc++abi-dev \
     make \
     && rm -rf /var/lib/apt/lists/*
 

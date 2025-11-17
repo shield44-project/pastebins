@@ -198,7 +198,8 @@ Code submitted → Try C11 -O2
 
 ### Backend
 - **Flask 3.0**: Python web framework
-- **gcc/g++**: C/C++ compilers
+- **clang/clang++**: C/C++ compilers with C++20/23 support
+- **libc++**: LLVM C++ standard library
 - **python3**: Python interpreter
 - **Docker**: Containerization
 
