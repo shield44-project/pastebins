@@ -97,49 +97,28 @@ def run_with_timeout(cmd, input_data=None, timeout=TIMEOUT_SECONDS):
 def get_c_compiler_strategies():
     """
     Get list of compiler flag strategies to try for C code.
-    Ordered from most strict to most permissive.
-    Uses clang for better compatibility.
+    Minimal flags for Vercel compatibility with Clang.
     """
     return [
         {
-            'name': 'Modern C11',
-            'flags': ['-std=c11', '-O2', '-Wall', '-lm'],
-            'description': 'C11 standard with optimizations'
+            'name': 'C11 standard',
+            'flags': ['-std=c11'],
+            'description': 'C11 standard'
         },
         {
-            'name': 'Permissive C11',
-            'flags': ['-std=c11', '-lm', '-w'],
-            'description': 'C11 with all warnings suppressed'
+            'name': 'C99 standard',
+            'flags': ['-std=c99'],
+            'description': 'C99 standard'
         },
         {
-            'name': 'GNU C extensions',
-            'flags': ['-std=gnu11', '-lm', '-w'],
-            'description': 'GNU C11 with extensions and no warnings'
+            'name': 'C89 standard',
+            'flags': ['-std=c89'],
+            'description': 'C89 standard'
         },
         {
-            'name': 'C99 fallback',
-            'flags': ['-std=c99', '-lm', '-w'],
-            'description': 'C99 standard with no warnings'
-        },
-        {
-            'name': 'GNU C99 extensions',
-            'flags': ['-std=gnu99', '-lm', '-w'],
-            'description': 'GNU C99 with extensions'
-        },
-        {
-            'name': 'C89 legacy',
-            'flags': ['-std=c89', '-lm', '-w'],
-            'description': 'Old C89 standard'
-        },
-        {
-            'name': 'Maximum permissive',
-            'flags': ['-w', '-fpermissive', '-lm'],
-            'description': 'Most permissive settings'
-        },
-        {
-            'name': 'No standard specified',
-            'flags': ['-lm', '-w'],
-            'description': 'Default compiler behavior with warnings off'
+            'name': 'No standard',
+            'flags': [],
+            'description': 'Default compiler behavior'
         }
     ]
 
@@ -268,89 +247,38 @@ def compile_and_run_c(code, input_data):
 def get_cpp_compiler_strategies():
     """
     Get list of compiler flag strategies to try for C++ code.
-    Ordered from most strict to most permissive.
-    Uses clang++ with libc++ for C++20 and C++23 support.
+    Minimal flags for Vercel compatibility with Clang++.
     """
     return [
         {
-            'name': 'Modern C++23',
-            'flags': ['-std=c++23', '-O2', '-Wall', '-stdlib=libc++', '-lm'],
-            'description': 'C++23 standard with optimizations'
+            'name': 'C++23 standard',
+            'flags': ['-std=c++23'],
+            'description': 'C++23 standard'
         },
         {
-            'name': 'Permissive C++23',
-            'flags': ['-std=c++23', '-stdlib=libc++', '-lm', '-w'],
-            'description': 'C++23 with all warnings suppressed'
+            'name': 'C++20 standard',
+            'flags': ['-std=c++20'],
+            'description': 'C++20 standard'
         },
         {
-            'name': 'Modern C++20',
-            'flags': ['-std=c++20', '-O2', '-Wall', '-stdlib=libc++', '-lm'],
-            'description': 'C++20 standard with optimizations'
-        },
-        {
-            'name': 'Permissive C++20',
-            'flags': ['-std=c++20', '-stdlib=libc++', '-lm', '-w'],
-            'description': 'C++20 with all warnings suppressed'
-        },
-        {
-            'name': 'Modern C++17',
-            'flags': ['-std=c++17', '-O2', '-Wall', '-lm'],
-            'description': 'C++17 standard with optimizations'
-        },
-        {
-            'name': 'Permissive C++17',
-            'flags': ['-std=c++17', '-lm', '-w'],
-            'description': 'C++17 with all warnings suppressed'
+            'name': 'C++17 standard',
+            'flags': ['-std=c++17'],
+            'description': 'C++17 standard'
         },
         {
             'name': 'C++14 standard',
-            'flags': ['-std=c++14', '-lm', '-w'],
-            'description': 'C++14 standard with no warnings'
+            'flags': ['-std=c++14'],
+            'description': 'C++14 standard'
         },
         {
             'name': 'C++11 standard',
-            'flags': ['-std=c++11', '-lm', '-w'],
-            'description': 'C++11 standard with no warnings'
+            'flags': ['-std=c++11'],
+            'description': 'C++11 standard'
         },
         {
-            'name': 'GNU C++23 extensions',
-            'flags': ['-std=gnu++23', '-stdlib=libc++', '-lm', '-w'],
-            'description': 'GNU C++23 with extensions'
-        },
-        {
-            'name': 'GNU C++20 extensions',
-            'flags': ['-std=gnu++20', '-stdlib=libc++', '-lm', '-w'],
-            'description': 'GNU C++20 with extensions'
-        },
-        {
-            'name': 'GNU C++17 extensions',
-            'flags': ['-std=gnu++17', '-lm', '-w'],
-            'description': 'GNU C++17 with extensions'
-        },
-        {
-            'name': 'GNU C++14 extensions',
-            'flags': ['-std=gnu++14', '-lm', '-w'],
-            'description': 'GNU C++14 with extensions'
-        },
-        {
-            'name': 'GNU C++11 extensions',
-            'flags': ['-std=gnu++11', '-lm', '-w'],
-            'description': 'GNU C++11 with extensions'
-        },
-        {
-            'name': 'Maximum permissive',
-            'flags': ['-w', '-fpermissive', '-lm'],
-            'description': 'Most permissive C++ settings'
-        },
-        {
-            'name': 'Legacy C++98',
-            'flags': ['-std=c++98', '-w', '-fpermissive', '-lm'],
-            'description': 'Old C++98 standard, very permissive'
-        },
-        {
-            'name': 'No standard specified',
-            'flags': ['-lm', '-w', '-fpermissive'],
-            'description': 'Default compiler behavior, all warnings off'
+            'name': 'No standard',
+            'flags': [],
+            'description': 'Default compiler behavior'
         }
     ]
 

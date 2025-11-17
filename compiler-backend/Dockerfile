@@ -6,9 +6,7 @@ FROM python:3.11-slim AS base
 # Install compilers and build tools
 RUN apt-get update && apt-get install -y \
     clang \
-    libc++-dev \
-    libc++abi-dev \
-    make \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
