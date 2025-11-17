@@ -33,8 +33,11 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 - **Memory leak detection** and resource management suggestions
 - **Best practices recommendations** (const correctness, modern C++ features)
 - **Alternative implementation suggestions** (vectors vs arrays, smart pointers, etc.)
+- **Complete refactored code examples** - ChatGPT-style comprehensive code transformations
+- **🎯 Full refactored version** combining all improvements into working code
 - **Code quality improvements** (magic numbers, uninitialized variables)
 - **Real-time analysis** with detailed, actionable feedback
+- **🚀 One-click GitHub PR creation** with refactored code
 - See [ENHANCED_COMPILER_README.md](ENHANCED_COMPILER_README.md) for full documentation
 
 ### 🌐 HTML Website Preview
@@ -71,10 +74,13 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 ### 📝 Notes with Screenshots
 - **Create and store notes with rich text content**
 - **Attach multiple screenshots/images to notes**
+- **Server-side storage with Vercel KV** (Redis-compatible database)
 - Drag-and-drop image upload support
 - Image gallery with thumbnail previews
 - Edit and delete notes
-- Stored locally in browser (localStorage) for static deployment
+- Fallback to local memory if KV not configured
+- **Accessible from any code view page via "📝 Notes" button**
+- See [VERCEL_KV_SETUP.md](VERCEL_KV_SETUP.md) for setup guide
 - Perfect for documentation, reminders, and visual references
 
 ## Supported Languages

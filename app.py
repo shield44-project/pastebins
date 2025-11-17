@@ -27,6 +27,9 @@ from cryptography.hazmat.backends import default_backend
 from enhanced_compiler import EnhancedCompiler
 from code_analyzer import CodeAnalyzer, analyze_code, get_analysis_report
 
+# Import notes storage
+from notes_storage import get_notes_storage, is_kv_enabled
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
@@ -1631,6 +1634,181 @@ def get_compiler_info():
         app.logger.error(f"Failed to get compiler info: {str(e)}")
         return jsonify({'error': f'Failed to get compiler info: {str(e)}'}), 500
 
+@app.route('/api/create-pr/<language>/<int:code_id>', methods=['POST'])
+def create_pr_with_refactored_code(language, code_id):
+    """
+    Create a GitHub pull request with AI-refactored code.
+    Analyzes the code, generates refactored version, creates a new branch, and opens a PR.
+    """
+    if not GITHUB_ENABLED or not GITHUB_TOKEN:
+        return jsonify({'error': 'GitHub integration not configured. Please set GITHUB_TOKEN environment variable.'}), 400
+    
+    if language not in ['c', 'cpp']:
+        return jsonify({'error': 'PR creation with AI refactoring only available for C and C++ code'}), 400
+    
+    try:
+        # Load code metadata and content
+        metadata = load_code_metadata(language)
+        if code_id >= len(metadata):
+            return jsonify({'error': 'Code not found'}), 404
+        
+        code_info = metadata[code_id]
+        
+        # Try to fetch from blob storage first
+        code_content = None
+        if BLOB_STORAGE_ENABLED and blob_client and 'blob_url' in code_info:
+            try:
+                code_content = blob_client.get(code_info['blob_url'])
+            except Exception as e:
+                app.logger.warning(f"Failed to fetch from blob storage: {str(e)}")
+        
+        # Fallback to local filesystem
+        if code_content is None:
+            code_path = os.path.join(app.config['CODES_DIRECTORY'], language, code_info['filename'])
+            try:
+                with open(code_path, 'r') as f:
+                    code_content = f.read()
+            except FileNotFoundError:
+                return jsonify({'error': 'Code file not found'}), 404
+        
+        # Analyze code to get refactored version
+        analysis = analyze_code(code_content, language)
+        
+        # Find the comprehensive refactored version
+        refactored_code = None
+        for alt in analysis['alternatives']:
+            if '🎯 Complete Refactored Version' in alt['approach']:
+                refactored_code = alt['recommended_code']
+                break
+        
+        if not refactored_code or refactored_code == code_content:
+            return jsonify({'error': 'No improvements found. Code is already optimal!'}), 400
+        
+        # Initialize GitHub client
+        g = Github(GITHUB_TOKEN)
+        repo = g.get_repo(GITHUB_REPO)
+        
+        # Create a new branch name
+        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        branch_name = f"ai-refactor/{language}/{code_info.get('title', 'code').replace(' ', '-').lower()}-{timestamp}"
+        
+        # Get the default branch reference
+        default_branch = repo.get_branch(GITHUB_BRANCH)
+        
+        # Create new branch
+        repo.create_git_ref(f"refs/heads/{branch_name}", default_branch.commit.sha)
+        
+        # Update the file in the new branch
+        file_path = f"stored_codes/{language}/{code_info['filename']}"
+        
+        # Generate commit message
+        commit_message = f"""🤖 AI-Powered Code Refactoring: {code_info.get('title', 'Code Improvements')}
+
+Applied AI-suggested improvements:
+- Security fixes: {analysis['summary']['critical']} critical, {analysis['summary']['errors']} errors
+- Code quality improvements: {analysis['summary']['suggestions']} suggestions
+- Modern best practices: {analysis['summary']['alternatives']} alternative approaches
+
+This is an automated refactoring based on static code analysis.
+Please review the changes before merging.
+"""
+        
+        # Get current file to update it
+        try:
+            contents = repo.get_contents(file_path, ref=branch_name)
+            repo.update_file(
+                path=file_path,
+                message=commit_message,
+                content=refactored_code,
+                sha=contents.sha,
+                branch=branch_name
+            )
+        except GithubException as e:
+            if e.status == 404:
+                # File doesn't exist, create it
+                repo.create_file(
+                    path=file_path,
+                    message=commit_message,
+                    content=refactored_code,
+                    branch=branch_name
+                )
+            else:
+                raise
+        
+        # Create pull request
+        pr_title = f"🤖 AI Code Refactoring: {code_info.get('title', 'Code Improvements')}"
+        pr_body = f"""## AI-Powered Code Refactoring
+
+This pull request contains AI-suggested improvements for `{code_info['filename']}`.
+
+### 📊 Analysis Summary
+- **Total Issues Found:** {analysis['summary']['total_issues']}
+  - Critical: {analysis['summary']['critical']}
+  - Errors: {analysis['summary']['errors']}
+  - Warnings: {analysis['summary']['warnings']}
+- **Suggestions:** {analysis['summary']['suggestions']}
+- **Alternative Approaches:** {analysis['summary']['alternatives']}
+
+### 🔧 Key Improvements
+
+"""
+        
+        # Add issues
+        if analysis['issues']:
+            pr_body += "#### 🔴 Issues Fixed\n"
+            for i, issue in enumerate(analysis['issues'][:5], 1):  # Limit to 5
+                pr_body += f"{i}. **[{issue.get('severity', 'warning').upper()}]** {issue['message']}\n"
+                pr_body += f"   - Fix: {issue['suggestion']}\n"
+            if len(analysis['issues']) > 5:
+                pr_body += f"\n_...and {len(analysis['issues']) - 5} more issues_\n"
+            pr_body += "\n"
+        
+        # Add suggestions
+        if analysis['suggestions']:
+            pr_body += "#### 💡 Improvements Applied\n"
+            for i, suggestion in enumerate(analysis['suggestions'][:5], 1):  # Limit to 5
+                pr_body += f"{i}. {suggestion['message']}\n"
+            if len(analysis['suggestions']) > 5:
+                pr_body += f"\n_...and {len(analysis['suggestions']) - 5} more improvements_\n"
+            pr_body += "\n"
+        
+        pr_body += """
+### ✅ What to Review
+- Review the refactored code for correctness
+- Ensure the improvements align with your coding standards
+- Test the refactored code to confirm it works as expected
+
+### 🤖 About This PR
+This pull request was automatically generated by AI code analysis.
+The refactoring follows industry best practices and security guidelines.
+
+**Branch:** `""" + branch_name + """`
+**Base:** `""" + GITHUB_BRANCH + """`
+"""
+        
+        # Create the PR
+        pr = repo.create_pull(
+            title=pr_title,
+            body=pr_body,
+            head=branch_name,
+            base=GITHUB_BRANCH
+        )
+        
+        return jsonify({
+            'success': True,
+            'pr_url': pr.html_url,
+            'pr_number': pr.number,
+            'branch': branch_name,
+            'message': 'Pull request created successfully! Click the link to review and merge.'
+        })
+        
+    except GithubException as e:
+        app.logger.error(f"GitHub API error: {str(e)}")
+        return jsonify({'error': f'GitHub API error: {e.data.get("message", str(e))}'}), 500
+    except Exception as e:
+        app.logger.error(f"Failed to create PR: {str(e)}")
+        return jsonify({'error': f'Failed to create PR: {str(e)}'}), 500
+
 @app.route('/api/folders', methods=['GET'])
 def list_folders():
     """List all language folders and their file counts."""
@@ -1837,6 +2015,124 @@ def upload_standalone():
     except Exception as e:
         app.logger.error(f"Unexpected error in upload_standalone: {str(e)}")
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+# ==================== Notes API Endpoints ====================
+
+@app.route('/api/notes', methods=['GET'])
+def list_notes():
+    """List all notes (summary only, no image data)."""
+    try:
+        storage = get_notes_storage()
+        notes = storage.list_notes()
+        
+        return jsonify({
+            'success': True,
+            'notes': notes,
+            'kv_enabled': is_kv_enabled()
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to list notes: {str(e)}")
+        return jsonify({'error': 'Failed to list notes'}), 500
+
+@app.route('/api/notes', methods=['POST'])
+def create_note():
+    """Create a new note with optional screenshots."""
+    try:
+        data = request.json
+        
+        if not data or 'title' not in data:
+            return jsonify({'error': 'Title is required'}), 400
+        
+        # Validate data
+        note_data = {
+            'title': data.get('title', '').strip(),
+            'content': data.get('content', '').strip(),
+            'images': data.get('images', [])
+        }
+        
+        # Validate image data
+        for img in note_data['images']:
+            if not isinstance(img, dict) or 'dataUrl' not in img or 'name' not in img:
+                return jsonify({'error': 'Invalid image data format'}), 400
+        
+        storage = get_notes_storage()
+        note_id = storage.create_note(note_data)
+        
+        return jsonify({
+            'success': True,
+            'note_id': note_id,
+            'message': 'Note created successfully'
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to create note: {str(e)}")
+        return jsonify({'error': f'Failed to create note: {str(e)}'}), 500
+
+@app.route('/api/notes/<note_id>', methods=['GET'])
+def get_note(note_id):
+    """Get a specific note with full data including images."""
+    try:
+        storage = get_notes_storage()
+        note = storage.get_note(note_id)
+        
+        if not note:
+            return jsonify({'error': 'Note not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'note': note
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to get note: {str(e)}")
+        return jsonify({'error': 'Failed to get note'}), 500
+
+@app.route('/api/notes/<note_id>', methods=['PUT'])
+def update_note(note_id):
+    """Update an existing note."""
+    try:
+        data = request.json
+        
+        if not data or 'title' not in data:
+            return jsonify({'error': 'Title is required'}), 400
+        
+        note_data = {
+            'title': data.get('title', '').strip(),
+            'content': data.get('content', '').strip(),
+            'images': data.get('images', [])
+        }
+        
+        storage = get_notes_storage()
+        success = storage.update_note(note_id, note_data)
+        
+        if not success:
+            return jsonify({'error': 'Note not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Note updated successfully'
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to update note: {str(e)}")
+        return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
+
+@app.route('/api/notes/<note_id>', methods=['DELETE'])
+def delete_note(note_id):
+    """Delete a note."""
+    try:
+        storage = get_notes_storage()
+        success = storage.delete_note(note_id)
+        
+        if not success:
+            return jsonify({'error': 'Note not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Note deleted successfully'
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to delete note: {str(e)}")
+        return jsonify({'error': 'Failed to delete note'}), 500
+
+# ==================== Error Handlers ====================
 
 # Error handlers
 @app.errorhandler(413)

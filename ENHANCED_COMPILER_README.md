@@ -93,9 +93,29 @@ When viewing a C or C++ file:
 3. Review the results in three categories:
    - **Issues Found**: Critical, errors, and warnings with fixes
    - **Suggestions**: Code quality and best practice recommendations
-   - **Alternative Approaches**: Different ways to solve the same problem
+   - **Alternative Approaches**: Different ways to solve the same problem, including **complete refactored code examples**
+4. Each alternative now includes full, working refactored code (like ChatGPT-style suggestions)
+5. A **"🎯 Complete Refactored Version"** is generated that combines all improvements
 
-#### 2. Running Code with Enhanced Compiler
+#### 2. Creating Pull Requests with Refactored Code
+
+After running AI analysis, if improvements are found:
+
+1. Click the **"🚀 Create PR with Refactored Code"** button
+2. Confirm the action in the dialog
+3. The system will:
+   - Apply all AI-suggested improvements
+   - Create a new branch in your GitHub repository
+   - Commit the refactored code with a detailed message
+   - Open a pull request with complete analysis summary
+4. Review the PR link that appears
+5. Click to open the PR on GitHub for review and merging
+
+**Requirements:**
+- GitHub integration must be configured (set `GITHUB_TOKEN` environment variable)
+- You must have write access to the repository
+
+#### 3. Running Code with Enhanced Compiler
 
 The enhanced compiler is used automatically when executing C/C++ code:
 
@@ -107,8 +127,34 @@ The enhanced compiler is used automatically when executing C/C++ code:
    - Warnings (if enabled)
    - Compilation time
    - Execution time
+4. Multiple compilers are supported (gcc, g++, clang, clang++) with automatic fallback to online compilation
 
 ### API Endpoints
+
+#### Create Pull Request with Refactored Code
+```
+POST /api/create-pr/<language>/<code_id>
+```
+
+Creates a GitHub pull request with AI-refactored code.
+
+**Response:**
+```json
+{
+  "success": true,
+  "pr_url": "https://github.com/owner/repo/pull/123",
+  "pr_number": 123,
+  "branch": "ai-refactor/cpp/my-code-20240101-120000",
+  "message": "Pull request created successfully!"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": "GitHub integration not configured. Please set GITHUB_TOKEN environment variable."
+}
+```
 
 #### Analyze Code (Stored File)
 ```
