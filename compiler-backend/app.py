@@ -94,8 +94,53 @@ def run_with_timeout(cmd, input_data=None, timeout=TIMEOUT_SECONDS):
         return "", f"Error executing command: {str(e)}", -1
 
 
+def analyze_c_errors(stderr):
+    """Analyze C compilation errors and provide helpful suggestions"""
+    suggestions = []
+    
+    error_patterns = {
+        'undeclared': {
+            'pattern': ['undeclared', 'was not declared'],
+            'suggestion': '💡 Variable or function not declared. Did you forget to:\n  - Declare the variable before using it?\n  - Include the required header file (e.g., #include <stdio.h>)?\n  - Check for typos in the variable/function name?'
+        },
+        'implicit_declaration': {
+            'pattern': ['implicit declaration'],
+            'suggestion': '💡 Function used without declaration. Add:\n  - #include <stdio.h> for printf, scanf\n  - #include <stdlib.h> for malloc, free\n  - #include <string.h> for string functions\n  - #include <math.h> for math functions (compile with -lm)'
+        },
+        'expected_semicolon': {
+            'pattern': ['expected', 'before'],
+            'suggestion': '💡 Syntax error detected. Common fixes:\n  - Add missing semicolon (;) at the end of the statement\n  - Check for missing closing braces }\n  - Verify parentheses are balanced'
+        },
+        'incompatible_types': {
+            'pattern': ['incompatible', 'type'],
+            'suggestion': '💡 Type mismatch. Try:\n  - Cast the value to the correct type\n  - Use correct format specifiers (%d for int, %f for float, %s for string)\n  - Verify function return types match expectations'
+        },
+        'undefined_reference': {
+            'pattern': ['undefined reference'],
+            'suggestion': '💡 Linking error. Solutions:\n  - For math functions: compile with -lm flag\n  - Check if function is defined/implemented\n  - Verify library is linked correctly'
+        },
+        'segmentation_fault': {
+            'pattern': ['Segmentation fault', 'segfault'],
+            'suggestion': '💡 Memory access error. Common causes:\n  - Dereferencing NULL pointer\n  - Array index out of bounds\n  - Using uninitialized pointer\n  - Buffer overflow'
+        },
+        'warning_unused': {
+            'pattern': ['unused variable', 'unused parameter'],
+            'suggestion': '⚠️ Unused variable detected. Consider:\n  - Removing the variable if not needed\n  - Using the variable or marking as __attribute__((unused))'
+        }
+    }
+    
+    stderr_lower = stderr.lower()
+    for error_type, info in error_patterns.items():
+        if any(pattern.lower() in stderr_lower for pattern in info['pattern']):
+            suggestions.append(info['suggestion'])
+    
+    if suggestions:
+        return '\n\n' + '\n\n'.join(suggestions)
+    return ''
+
+
 def compile_and_run_c(code, input_data):
-    """Compile and execute C code"""
+    """Compile and execute C code with enhanced error handling and AI suggestions"""
     cleanup_old_files()
     
     source_file = os.path.join(TEMP_DIR, generate_random_filename('.c'))
@@ -106,26 +151,61 @@ def compile_and_run_c(code, input_data):
         with open(source_file, 'w') as f:
             f.write(code)
         
-        # Compile
-        compile_cmd = ['gcc', '-o', executable_file, source_file, '-Wall']
+        # Enhanced compile flags for better error detection and security
+        compile_cmd = [
+            'gcc',
+            '-o', executable_file,
+            source_file,
+            '-Wall',           # Enable all warnings
+            '-Wextra',         # Enable extra warnings
+            '-Werror=implicit-function-declaration',  # Treat implicit declarations as errors
+            '-Wformat',        # Check printf/scanf format strings
+            '-Wformat-security',  # Security warnings for format strings
+            '-std=c11',        # Use C11 standard
+            '-O2',             # Optimization level 2
+            '-fstack-protector-strong',  # Stack protection
+            '-D_FORTIFY_SOURCE=2',  # Runtime buffer overflow detection
+            '-lm'              # Link math library by default
+        ]
+        
         stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
         
         if returncode != 0:
+            # Analyze errors and provide helpful suggestions
+            enhanced_stderr = stderr + analyze_c_errors(stderr)
             return {
                 'stdout': '',
-                'stderr': stderr,
+                'stderr': enhanced_stderr,
                 'error': 'Compilation failed',
                 'success': False
             }
         
-        # Execute
+        # Execute with runtime error detection
         stdout, stderr, returncode = run_with_timeout([executable_file], input_data)
+        
+        # Analyze runtime errors
+        if returncode != 0 and stderr:
+            enhanced_stderr = stderr + analyze_c_errors(stderr)
+            return {
+                'stdout': stdout,
+                'stderr': enhanced_stderr,
+                'error': 'Runtime error',
+                'success': False
+            }
         
         return {
             'stdout': stdout,
-            'stderr': stderr,
+            'stderr': stderr if stderr else '',
             'error': None if returncode == 0 else 'Runtime error',
             'success': returncode == 0
+        }
+    
+    except Exception as e:
+        return {
+            'stdout': '',
+            'stderr': f'Internal error: {str(e)}',
+            'error': 'Execution failed',
+            'success': False
         }
     
     finally:
@@ -139,8 +219,57 @@ def compile_and_run_c(code, input_data):
             pass
 
 
+def analyze_cpp_errors(stderr):
+    """Analyze C++ compilation errors and provide helpful suggestions"""
+    suggestions = []
+    
+    error_patterns = {
+        'undeclared': {
+            'pattern': ['undeclared', 'was not declared', 'not declared in this scope'],
+            'suggestion': '💡 Variable or function not declared. Did you forget to:\n  - Declare the variable before using it?\n  - Include the required header (e.g., #include <iostream>, #include <vector>)?\n  - Add "using namespace std;" or use std:: prefix?\n  - Check for typos in the identifier name?'
+        },
+        'no_match': {
+            'pattern': ['no matching function', 'no match for'],
+            'suggestion': '💡 Function signature mismatch. Try:\n  - Check the number and types of arguments\n  - Verify template parameters are correct\n  - Include the correct header file\n  - Check for const-correctness'
+        },
+        'expected_semicolon': {
+            'pattern': ['expected', 'before'],
+            'suggestion': '💡 Syntax error detected. Common fixes:\n  - Add missing semicolon (;)\n  - Check for missing closing braces }\n  - Verify template brackets <> are balanced\n  - Check namespace declarations'
+        },
+        'type_error': {
+            'pattern': ['cannot convert', 'incompatible types', 'invalid conversion'],
+            'suggestion': '💡 Type conversion error. Solutions:\n  - Use static_cast<type>(value) for explicit conversion\n  - Verify types match in assignment/comparison\n  - Check iterator types match container types\n  - Use correct type for std containers'
+        },
+        'undefined_reference': {
+            'pattern': ['undefined reference'],
+            'suggestion': '💡 Linking error. Solutions:\n  - Implement all declared functions\n  - Link required libraries (e.g., -lm for math, -lpthread for threads)\n  - Check template instantiation\n  - Verify member function definitions match declarations'
+        },
+        'segmentation_fault': {
+            'pattern': ['Segmentation fault', 'segfault'],
+            'suggestion': '💡 Memory access error. Common causes:\n  - Dereferencing nullptr\n  - Vector/array out of bounds access\n  - Using iterator after container modification\n  - Dangling pointer/reference\n  - Stack overflow from infinite recursion'
+        },
+        'does_not_name': {
+            'pattern': ['does not name a type'],
+            'suggestion': '💡 Type not recognized. Check:\n  - Include proper header (#include <string> for std::string)\n  - Add "using namespace std;" or std:: prefix\n  - Forward declarations are complete\n  - Template syntax is correct'
+        },
+        'pure_virtual': {
+            'pattern': ['pure virtual', 'abstract class'],
+            'suggestion': '💡 Cannot instantiate abstract class:\n  - Implement all pure virtual functions\n  - Use pointer/reference to abstract class\n  - Create concrete derived class'
+        }
+    }
+    
+    stderr_lower = stderr.lower()
+    for error_type, info in error_patterns.items():
+        if any(pattern.lower() in stderr_lower for pattern in info['pattern']):
+            suggestions.append(info['suggestion'])
+    
+    if suggestions:
+        return '\n\n' + '\n\n'.join(suggestions)
+    return ''
+
+
 def compile_and_run_cpp(code, input_data):
-    """Compile and execute C++ code"""
+    """Compile and execute C++ code with enhanced error handling and AI suggestions"""
     cleanup_old_files()
     
     source_file = os.path.join(TEMP_DIR, generate_random_filename('.cpp'))
@@ -151,26 +280,63 @@ def compile_and_run_cpp(code, input_data):
         with open(source_file, 'w') as f:
             f.write(code)
         
-        # Compile
-        compile_cmd = ['g++', '-o', executable_file, source_file, '-Wall', '-std=c++17']
+        # Enhanced compile flags for better error detection and modern C++
+        compile_cmd = [
+            'g++',
+            '-o', executable_file,
+            source_file,
+            '-Wall',           # Enable all warnings
+            '-Wextra',         # Enable extra warnings
+            '-Wpedantic',      # Strict ISO C++ compliance
+            '-Werror=return-type',  # Error on missing return
+            '-Wformat',        # Check format strings
+            '-Wformat-security',  # Security warnings
+            '-std=c++17',      # Use C++17 standard
+            '-O2',             # Optimization level 2
+            '-fstack-protector-strong',  # Stack protection
+            '-D_FORTIFY_SOURCE=2',  # Runtime buffer overflow detection
+            '-D_GLIBCXX_ASSERTIONS',  # Enable C++ assertions
+            '-lm'              # Link math library
+        ]
+        
         stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
         
         if returncode != 0:
+            # Analyze errors and provide helpful suggestions
+            enhanced_stderr = stderr + analyze_cpp_errors(stderr)
             return {
                 'stdout': '',
-                'stderr': stderr,
+                'stderr': enhanced_stderr,
                 'error': 'Compilation failed',
                 'success': False
             }
         
-        # Execute
+        # Execute with runtime error detection
         stdout, stderr, returncode = run_with_timeout([executable_file], input_data)
+        
+        # Analyze runtime errors
+        if returncode != 0 and stderr:
+            enhanced_stderr = stderr + analyze_cpp_errors(stderr)
+            return {
+                'stdout': stdout,
+                'stderr': enhanced_stderr,
+                'error': 'Runtime error',
+                'success': False
+            }
         
         return {
             'stdout': stdout,
-            'stderr': stderr,
+            'stderr': stderr if stderr else '',
             'error': None if returncode == 0 else 'Runtime error',
             'success': returncode == 0
+        }
+    
+    except Exception as e:
+        return {
+            'stdout': '',
+            'stderr': f'Internal error: {str(e)}',
+            'error': 'Execution failed',
+            'success': False
         }
     
     finally:
