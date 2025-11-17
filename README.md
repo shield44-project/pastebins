@@ -74,10 +74,13 @@ A comprehensive web application for storing, viewing, categorizing, and executin
 ### 📝 Notes with Screenshots
 - **Create and store notes with rich text content**
 - **Attach multiple screenshots/images to notes**
+- **Server-side storage with Vercel KV** (Redis-compatible database)
 - Drag-and-drop image upload support
 - Image gallery with thumbnail previews
 - Edit and delete notes
-- Stored locally in browser (localStorage) for static deployment
+- Fallback to local memory if KV not configured
+- **Accessible from any code view page via "📝 Notes" button**
+- See [VERCEL_KV_SETUP.md](VERCEL_KV_SETUP.md) for setup guide
 - Perfect for documentation, reminders, and visual references
 
 ## Supported Languages

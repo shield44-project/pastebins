@@ -27,6 +27,9 @@ from cryptography.hazmat.backends import default_backend
 from enhanced_compiler import EnhancedCompiler
 from code_analyzer import CodeAnalyzer, analyze_code, get_analysis_report
 
+# Import notes storage
+from notes_storage import get_notes_storage, is_kv_enabled
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 app.config['CODES_DIRECTORY'] = os.environ.get('CODES_DIRECTORY', 'stored_codes')
@@ -2012,6 +2015,124 @@ def upload_standalone():
     except Exception as e:
         app.logger.error(f"Unexpected error in upload_standalone: {str(e)}")
         return jsonify({'error': 'An unexpected error occurred'}), 500
+
+# ==================== Notes API Endpoints ====================
+
+@app.route('/api/notes', methods=['GET'])
+def list_notes():
+    """List all notes (summary only, no image data)."""
+    try:
+        storage = get_notes_storage()
+        notes = storage.list_notes()
+        
+        return jsonify({
+            'success': True,
+            'notes': notes,
+            'kv_enabled': is_kv_enabled()
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to list notes: {str(e)}")
+        return jsonify({'error': 'Failed to list notes'}), 500
+
+@app.route('/api/notes', methods=['POST'])
+def create_note():
+    """Create a new note with optional screenshots."""
+    try:
+        data = request.json
+        
+        if not data or 'title' not in data:
+            return jsonify({'error': 'Title is required'}), 400
+        
+        # Validate data
+        note_data = {
+            'title': data.get('title', '').strip(),
+            'content': data.get('content', '').strip(),
+            'images': data.get('images', [])
+        }
+        
+        # Validate image data
+        for img in note_data['images']:
+            if not isinstance(img, dict) or 'dataUrl' not in img or 'name' not in img:
+                return jsonify({'error': 'Invalid image data format'}), 400
+        
+        storage = get_notes_storage()
+        note_id = storage.create_note(note_data)
+        
+        return jsonify({
+            'success': True,
+            'note_id': note_id,
+            'message': 'Note created successfully'
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to create note: {str(e)}")
+        return jsonify({'error': f'Failed to create note: {str(e)}'}), 500
+
+@app.route('/api/notes/<note_id>', methods=['GET'])
+def get_note(note_id):
+    """Get a specific note with full data including images."""
+    try:
+        storage = get_notes_storage()
+        note = storage.get_note(note_id)
+        
+        if not note:
+            return jsonify({'error': 'Note not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'note': note
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to get note: {str(e)}")
+        return jsonify({'error': 'Failed to get note'}), 500
+
+@app.route('/api/notes/<note_id>', methods=['PUT'])
+def update_note(note_id):
+    """Update an existing note."""
+    try:
+        data = request.json
+        
+        if not data or 'title' not in data:
+            return jsonify({'error': 'Title is required'}), 400
+        
+        note_data = {
+            'title': data.get('title', '').strip(),
+            'content': data.get('content', '').strip(),
+            'images': data.get('images', [])
+        }
+        
+        storage = get_notes_storage()
+        success = storage.update_note(note_id, note_data)
+        
+        if not success:
+            return jsonify({'error': 'Note not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Note updated successfully'
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to update note: {str(e)}")
+        return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
+
+@app.route('/api/notes/<note_id>', methods=['DELETE'])
+def delete_note(note_id):
+    """Delete a note."""
+    try:
+        storage = get_notes_storage()
+        success = storage.delete_note(note_id)
+        
+        if not success:
+            return jsonify({'error': 'Note not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Note deleted successfully'
+        })
+    except Exception as e:
+        app.logger.error(f"Failed to delete note: {str(e)}")
+        return jsonify({'error': 'Failed to delete note'}), 500
+
+# ==================== Error Handlers ====================
 
 # Error handlers
 @app.errorhandler(413)
