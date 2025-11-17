@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+.git
+.gitignore
+README.md
+*.md
