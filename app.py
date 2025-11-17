@@ -202,10 +202,11 @@ def execute_code_online(code_content, stdin_input='', language='c'):
         }
         
         compiler_option_map = {
-            'c': '-Wall -O2',
-            'cpp': '-Wall -O2 -std=c++17',
+            'c': '',
+            'cpp': '-std=c++20',   # safe + modern
             'java': ''
         }
+
         
         language_name_map = {
             'c': 'C',
