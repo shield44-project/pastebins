@@ -94,6 +94,55 @@ def run_with_timeout(cmd, input_data=None, timeout=TIMEOUT_SECONDS):
         return "", f"Error executing command: {str(e)}", -1
 
 
+def get_c_compiler_strategies():
+    """
+    Get list of compiler flag strategies to try for C code.
+    Ordered from most strict to most permissive.
+    """
+    return [
+        {
+            'name': 'Modern C with optimizations',
+            'flags': ['-std=c11', '-O2', '-lm'],
+            'description': 'C11 standard with optimizations'
+        },
+        {
+            'name': 'Permissive C11',
+            'flags': ['-std=c11', '-O1', '-lm', '-w'],
+            'description': 'C11 with all warnings suppressed'
+        },
+        {
+            'name': 'GNU C extensions',
+            'flags': ['-std=gnu11', '-O1', '-lm', '-w'],
+            'description': 'GNU C11 with extensions and no warnings'
+        },
+        {
+            'name': 'C99 fallback',
+            'flags': ['-std=c99', '-lm', '-w'],
+            'description': 'C99 standard with no warnings'
+        },
+        {
+            'name': 'GNU C99 extensions',
+            'flags': ['-std=gnu99', '-lm', '-w'],
+            'description': 'GNU C99 with extensions'
+        },
+        {
+            'name': 'C89 legacy',
+            'flags': ['-std=c89', '-lm', '-w'],
+            'description': 'Old C89 standard'
+        },
+        {
+            'name': 'Maximum permissive',
+            'flags': ['-w', '-fpermissive', '-lm'],
+            'description': 'Most permissive settings'
+        },
+        {
+            'name': 'No standard specified',
+            'flags': ['-lm', '-w'],
+            'description': 'Default compiler behavior with warnings off'
+        }
+    ]
+
+
 def analyze_c_errors(stderr):
     """Analyze C compilation errors and provide helpful suggestions"""
     suggestions = []
@@ -105,7 +154,7 @@ def analyze_c_errors(stderr):
         },
         'implicit_declaration': {
             'pattern': ['implicit declaration'],
-            'suggestion': '💡 Function used without declaration. Add:\n  - #include <stdio.h> for printf, scanf\n  - #include <stdlib.h> for malloc, free\n  - #include <string.h> for string functions\n  - #include <math.h> for math functions (compile with -lm)'
+            'suggestion': '💡 Function used without declaration. Add:\n  - #include <stdio.h> for printf, scanf\n  - #include <stdlib.h> for malloc, free\n  - #include <string.h> for string functions\n  - #include <math.h> for math functions'
         },
         'expected_semicolon': {
             'pattern': ['expected', 'before'],
@@ -117,15 +166,7 @@ def analyze_c_errors(stderr):
         },
         'undefined_reference': {
             'pattern': ['undefined reference'],
-            'suggestion': '💡 Linking error. Solutions:\n  - For math functions: compile with -lm flag\n  - Check if function is defined/implemented\n  - Verify library is linked correctly'
-        },
-        'segmentation_fault': {
-            'pattern': ['Segmentation fault', 'segfault'],
-            'suggestion': '💡 Memory access error. Common causes:\n  - Dereferencing NULL pointer\n  - Array index out of bounds\n  - Using uninitialized pointer\n  - Buffer overflow'
-        },
-        'warning_unused': {
-            'pattern': ['unused variable', 'unused parameter'],
-            'suggestion': '⚠️ Unused variable detected. Consider:\n  - Removing the variable if not needed\n  - Using the variable or marking as __attribute__((unused))'
+            'suggestion': '💡 Linking error. Solutions:\n  - Check if function is defined/implemented\n  - Verify library is linked correctly'
         }
     }
     
@@ -140,7 +181,10 @@ def analyze_c_errors(stderr):
 
 
 def compile_and_run_c(code, input_data):
-    """Compile and execute C code with enhanced error handling and AI suggestions"""
+    """
+    Compile and execute C code with intelligent retry mechanism.
+    Tries multiple compiler strategies until successful compilation.
+    """
     cleanup_old_files()
     
     source_file = os.path.join(TEMP_DIR, generate_random_filename('.c'))
@@ -151,53 +195,53 @@ def compile_and_run_c(code, input_data):
         with open(source_file, 'w') as f:
             f.write(code)
         
-        # Enhanced compile flags for better error detection and security
-        compile_cmd = [
-            'gcc',
-            '-o', executable_file,
-            source_file,
-            '-Wall',           # Enable all warnings
-            '-Wextra',         # Enable extra warnings
-            '-Werror=implicit-function-declaration',  # Treat implicit declarations as errors
-            '-Wformat',        # Check printf/scanf format strings
-            '-Wformat-security',  # Security warnings for format strings
-            '-std=c11',        # Use C11 standard
-            '-O2',             # Optimization level 2
-            '-fstack-protector-strong',  # Stack protection
-            '-D_FORTIFY_SOURCE=2',  # Runtime buffer overflow detection
-            '-lm'              # Link math library by default
-        ]
+        strategies = get_c_compiler_strategies()
+        last_error = None
+        compilation_attempts = []
         
-        stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
+        # Try each strategy until one succeeds
+        for strategy in strategies:
+            compile_cmd = ['gcc', '-o', executable_file, source_file] + strategy['flags']
+            stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
+            
+            compilation_attempts.append({
+                'strategy': strategy['name'],
+                'success': returncode == 0,
+                'stderr': stderr[:200] if stderr else ''
+            })
+            
+            if returncode == 0:
+                # Compilation successful! Now execute
+                stdout, stderr, returncode = run_with_timeout([executable_file], input_data)
+                
+                success_msg = f"✅ Compiled successfully using: {strategy['description']}"
+                if len(compilation_attempts) > 1:
+                    success_msg += f"\n🔄 Tried {len(compilation_attempts)} compiler strategies before success"
+                
+                return {
+                    'stdout': stdout,
+                    'stderr': stderr if stderr else '',
+                    'error': None if returncode == 0 else 'Runtime error',
+                    'success': returncode == 0,
+                    'compilation_info': success_msg
+                }
+            
+            last_error = stderr
         
-        if returncode != 0:
-            # Analyze errors and provide helpful suggestions
-            enhanced_stderr = stderr + analyze_c_errors(stderr)
-            return {
-                'stdout': '',
-                'stderr': enhanced_stderr,
-                'error': 'Compilation failed',
-                'success': False
-            }
+        # All strategies failed
+        error_msg = f"❌ Compilation failed after trying {len(strategies)} different strategies:\n\n"
+        for i, attempt in enumerate(compilation_attempts, 1):
+            error_msg += f"{i}. {attempt['strategy']}: Failed\n"
         
-        # Execute with runtime error detection
-        stdout, stderr, returncode = run_with_timeout([executable_file], input_data)
-        
-        # Analyze runtime errors
-        if returncode != 0 and stderr:
-            enhanced_stderr = stderr + analyze_c_errors(stderr)
-            return {
-                'stdout': stdout,
-                'stderr': enhanced_stderr,
-                'error': 'Runtime error',
-                'success': False
-            }
+        error_msg += "\n" + "=" * 60 + "\n"
+        error_msg += "Last error output:\n" + last_error
+        error_msg += analyze_c_errors(last_error)
         
         return {
-            'stdout': stdout,
-            'stderr': stderr if stderr else '',
-            'error': None if returncode == 0 else 'Runtime error',
-            'success': returncode == 0
+            'stdout': '',
+            'stderr': error_msg,
+            'error': 'Compilation failed with all strategies',
+            'success': False
         }
     
     except Exception as e:
@@ -219,6 +263,65 @@ def compile_and_run_c(code, input_data):
             pass
 
 
+def get_cpp_compiler_strategies():
+    """
+    Get list of compiler flag strategies to try for C++ code.
+    Ordered from most strict to most permissive.
+    """
+    return [
+        {
+            'name': 'Modern C++17',
+            'flags': ['-std=c++17', '-O2', '-lm'],
+            'description': 'C++17 standard with optimizations'
+        },
+        {
+            'name': 'Permissive C++17',
+            'flags': ['-std=c++17', '-O1', '-lm', '-w'],
+            'description': 'C++17 with all warnings suppressed'
+        },
+        {
+            'name': 'C++14 standard',
+            'flags': ['-std=c++14', '-lm', '-w'],
+            'description': 'C++14 standard with no warnings'
+        },
+        {
+            'name': 'C++11 standard',
+            'flags': ['-std=c++11', '-lm', '-w'],
+            'description': 'C++11 standard with no warnings'
+        },
+        {
+            'name': 'GNU C++17 extensions',
+            'flags': ['-std=gnu++17', '-lm', '-w'],
+            'description': 'GNU C++17 with extensions'
+        },
+        {
+            'name': 'GNU C++14 extensions',
+            'flags': ['-std=gnu++14', '-lm', '-w'],
+            'description': 'GNU C++14 with extensions'
+        },
+        {
+            'name': 'GNU C++11 extensions',
+            'flags': ['-std=gnu++11', '-lm', '-w'],
+            'description': 'GNU C++11 with extensions'
+        },
+        {
+            'name': 'Maximum permissive',
+            'flags': ['-w', '-fpermissive', '-lm'],
+            'description': 'Most permissive C++ settings'
+        },
+        {
+            'name': 'Legacy C++98',
+            'flags': ['-std=c++98', '-w', '-fpermissive', '-lm'],
+            'description': 'Old C++98 standard, very permissive'
+        },
+        {
+            'name': 'No standard specified',
+            'flags': ['-lm', '-w', '-fpermissive'],
+            'description': 'Default compiler behavior, all warnings off'
+        }
+    ]
+
+
 def analyze_cpp_errors(stderr):
     """Analyze C++ compilation errors and provide helpful suggestions"""
     suggestions = []
@@ -230,31 +333,23 @@ def analyze_cpp_errors(stderr):
         },
         'no_match': {
             'pattern': ['no matching function', 'no match for'],
-            'suggestion': '💡 Function signature mismatch. Try:\n  - Check the number and types of arguments\n  - Verify template parameters are correct\n  - Include the correct header file\n  - Check for const-correctness'
+            'suggestion': '💡 Function signature mismatch. Try:\n  - Check the number and types of arguments\n  - Verify template parameters are correct\n  - Include the correct header file'
         },
         'expected_semicolon': {
             'pattern': ['expected', 'before'],
-            'suggestion': '💡 Syntax error detected. Common fixes:\n  - Add missing semicolon (;)\n  - Check for missing closing braces }\n  - Verify template brackets <> are balanced\n  - Check namespace declarations'
+            'suggestion': '💡 Syntax error detected. Common fixes:\n  - Add missing semicolon (;)\n  - Check for missing closing braces }\n  - Verify template brackets <> are balanced'
         },
         'type_error': {
             'pattern': ['cannot convert', 'incompatible types', 'invalid conversion'],
-            'suggestion': '💡 Type conversion error. Solutions:\n  - Use static_cast<type>(value) for explicit conversion\n  - Verify types match in assignment/comparison\n  - Check iterator types match container types\n  - Use correct type for std containers'
+            'suggestion': '💡 Type conversion error. Solutions:\n  - Use static_cast<type>(value) for explicit conversion\n  - Verify types match in assignment/comparison\n  - Check iterator types match container types'
         },
         'undefined_reference': {
             'pattern': ['undefined reference'],
-            'suggestion': '💡 Linking error. Solutions:\n  - Implement all declared functions\n  - Link required libraries (e.g., -lm for math, -lpthread for threads)\n  - Check template instantiation\n  - Verify member function definitions match declarations'
-        },
-        'segmentation_fault': {
-            'pattern': ['Segmentation fault', 'segfault'],
-            'suggestion': '💡 Memory access error. Common causes:\n  - Dereferencing nullptr\n  - Vector/array out of bounds access\n  - Using iterator after container modification\n  - Dangling pointer/reference\n  - Stack overflow from infinite recursion'
+            'suggestion': '💡 Linking error. Solutions:\n  - Implement all declared functions\n  - Link required libraries\n  - Check template instantiation'
         },
         'does_not_name': {
             'pattern': ['does not name a type'],
-            'suggestion': '💡 Type not recognized. Check:\n  - Include proper header (#include <string> for std::string)\n  - Add "using namespace std;" or std:: prefix\n  - Forward declarations are complete\n  - Template syntax is correct'
-        },
-        'pure_virtual': {
-            'pattern': ['pure virtual', 'abstract class'],
-            'suggestion': '💡 Cannot instantiate abstract class:\n  - Implement all pure virtual functions\n  - Use pointer/reference to abstract class\n  - Create concrete derived class'
+            'suggestion': '💡 Type not recognized. Check:\n  - Include proper header (#include <string> for std::string)\n  - Add "using namespace std;" or std:: prefix\n  - Forward declarations are complete'
         }
     }
     
@@ -269,7 +364,10 @@ def analyze_cpp_errors(stderr):
 
 
 def compile_and_run_cpp(code, input_data):
-    """Compile and execute C++ code with enhanced error handling and AI suggestions"""
+    """
+    Compile and execute C++ code with intelligent retry mechanism.
+    Tries multiple compiler strategies until successful compilation.
+    """
     cleanup_old_files()
     
     source_file = os.path.join(TEMP_DIR, generate_random_filename('.cpp'))
@@ -280,55 +378,53 @@ def compile_and_run_cpp(code, input_data):
         with open(source_file, 'w') as f:
             f.write(code)
         
-        # Enhanced compile flags for better error detection and modern C++
-        compile_cmd = [
-            'g++',
-            '-o', executable_file,
-            source_file,
-            '-Wall',           # Enable all warnings
-            '-Wextra',         # Enable extra warnings
-            '-Wpedantic',      # Strict ISO C++ compliance
-            '-Werror=return-type',  # Error on missing return
-            '-Wformat',        # Check format strings
-            '-Wformat-security',  # Security warnings
-            '-std=c++17',      # Use C++17 standard
-            '-O2',             # Optimization level 2
-            '-fstack-protector-strong',  # Stack protection
-            '-D_FORTIFY_SOURCE=2',  # Runtime buffer overflow detection
-            '-D_GLIBCXX_ASSERTIONS',  # Enable C++ assertions
-            '-lm'              # Link math library
-        ]
+        strategies = get_cpp_compiler_strategies()
+        last_error = None
+        compilation_attempts = []
         
-        stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
+        # Try each strategy until one succeeds
+        for strategy in strategies:
+            compile_cmd = ['g++', '-o', executable_file, source_file] + strategy['flags']
+            stdout, stderr, returncode = run_with_timeout(compile_cmd, timeout=30)
+            
+            compilation_attempts.append({
+                'strategy': strategy['name'],
+                'success': returncode == 0,
+                'stderr': stderr[:200] if stderr else ''
+            })
+            
+            if returncode == 0:
+                # Compilation successful! Now execute
+                stdout, stderr, returncode = run_with_timeout([executable_file], input_data)
+                
+                success_msg = f"✅ Compiled successfully using: {strategy['description']}"
+                if len(compilation_attempts) > 1:
+                    success_msg += f"\n🔄 Tried {len(compilation_attempts)} compiler strategies before success"
+                
+                return {
+                    'stdout': stdout,
+                    'stderr': stderr if stderr else '',
+                    'error': None if returncode == 0 else 'Runtime error',
+                    'success': returncode == 0,
+                    'compilation_info': success_msg
+                }
+            
+            last_error = stderr
         
-        if returncode != 0:
-            # Analyze errors and provide helpful suggestions
-            enhanced_stderr = stderr + analyze_cpp_errors(stderr)
-            return {
-                'stdout': '',
-                'stderr': enhanced_stderr,
-                'error': 'Compilation failed',
-                'success': False
-            }
+        # All strategies failed
+        error_msg = f"❌ Compilation failed after trying {len(strategies)} different strategies:\n\n"
+        for i, attempt in enumerate(compilation_attempts, 1):
+            error_msg += f"{i}. {attempt['strategy']}: Failed\n"
         
-        # Execute with runtime error detection
-        stdout, stderr, returncode = run_with_timeout([executable_file], input_data)
-        
-        # Analyze runtime errors
-        if returncode != 0 and stderr:
-            enhanced_stderr = stderr + analyze_cpp_errors(stderr)
-            return {
-                'stdout': stdout,
-                'stderr': enhanced_stderr,
-                'error': 'Runtime error',
-                'success': False
-            }
+        error_msg += "\n" + "=" * 60 + "\n"
+        error_msg += "Last error output:\n" + last_error
+        error_msg += analyze_cpp_errors(last_error)
         
         return {
-            'stdout': stdout,
-            'stderr': stderr if stderr else '',
-            'error': None if returncode == 0 else 'Runtime error',
-            'success': returncode == 0
+            'stdout': '',
+            'stderr': error_msg,
+            'error': 'Compilation failed with all strategies',
+            'success': False
         }
     
     except Exception as e:
