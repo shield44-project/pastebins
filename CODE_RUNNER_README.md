@@ -175,7 +175,7 @@ Execute code with intelligent compilation.
 
 When you submit C/C++ code, the backend:
 
-1. **First attempt**: Tries modern standards (C11/C++23/C++20) with optimizations
+1. **First attempt**: Tries modern standards (C11/C++23/C++20)
 2. **On failure**: Falls back to permissive mode with warnings suppressed
 3. **Continues**: Tries older standards (C99, C89, C++17, C++14, C++11, C++98)
 4. **Final attempt**: Maximum permissive mode with `-fpermissive` flag

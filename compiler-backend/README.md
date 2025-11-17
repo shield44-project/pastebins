@@ -136,7 +136,7 @@ Execute code.
 ## 🎯 Compiler Strategies
 
 ### C Compilation
-1. Modern C11 with O2 optimization
+1. Modern C11
 2. Permissive C11 (warnings off)
 3. GNU C11 with extensions
 4. C99 fallback
@@ -146,11 +146,11 @@ Execute code.
 8. Default compiler behavior
 
 ### C++ Compilation
-1. Modern C++23 with O2 optimization
+1. Modern C++23
 2. Permissive C++23 (warnings off)
-3. Modern C++20 with O2 optimization
+3. Modern C++20
 4. Permissive C++20 (warnings off)
-5. Modern C++17 with O2 optimization
+5. Modern C++17
 6. Permissive C++17 (warnings off)
 7. C++14 standard
 8. C++11 standard

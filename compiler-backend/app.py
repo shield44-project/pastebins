@@ -101,18 +101,18 @@ def get_c_compiler_strategies():
     """
     return [
         {
-            'name': 'Modern C with optimizations',
-            'flags': ['-std=c11', '-O2', '-lm'],
-            'description': 'C11 standard with optimizations'
+            'name': 'Modern C11',
+            'flags': ['-std=c11', '-lm'],
+            'description': 'C11 standard'
         },
         {
             'name': 'Permissive C11',
-            'flags': ['-std=c11', '-O1', '-lm', '-w'],
+            'flags': ['-std=c11', '-lm', '-w'],
             'description': 'C11 with all warnings suppressed'
         },
         {
             'name': 'GNU C extensions',
-            'flags': ['-std=gnu11', '-O1', '-lm', '-w'],
+            'flags': ['-std=gnu11', '-lm', '-w'],
             'description': 'GNU C11 with extensions and no warnings'
         },
         {
@@ -272,32 +272,32 @@ def get_cpp_compiler_strategies():
     return [
         {
             'name': 'Modern C++23',
-            'flags': ['-std=c++23', '-O2', '-lm'],
-            'description': 'C++23 standard with optimizations'
+            'flags': ['-std=c++23', '-lm'],
+            'description': 'C++23 standard'
         },
         {
             'name': 'Permissive C++23',
-            'flags': ['-std=c++23', '-O1', '-lm', '-w'],
+            'flags': ['-std=c++23', '-lm', '-w'],
             'description': 'C++23 with all warnings suppressed'
         },
         {
             'name': 'Modern C++20',
-            'flags': ['-std=c++20', '-O2', '-lm'],
-            'description': 'C++20 standard with optimizations'
+            'flags': ['-std=c++20', '-lm'],
+            'description': 'C++20 standard'
         },
         {
             'name': 'Permissive C++20',
-            'flags': ['-std=c++20', '-O1', '-lm', '-w'],
+            'flags': ['-std=c++20', '-lm', '-w'],
             'description': 'C++20 with all warnings suppressed'
         },
         {
             'name': 'Modern C++17',
-            'flags': ['-std=c++17', '-O2', '-lm'],
-            'description': 'C++17 standard with optimizations'
+            'flags': ['-std=c++17', '-lm'],
+            'description': 'C++17 standard'
         },
         {
             'name': 'Permissive C++17',
-            'flags': ['-std=c++17', '-O1', '-lm', '-w'],
+            'flags': ['-std=c++17', '-lm', '-w'],
             'description': 'C++17 with all warnings suppressed'
         },
         {
