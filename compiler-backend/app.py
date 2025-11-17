@@ -267,8 +267,29 @@ def get_cpp_compiler_strategies():
     """
     Get list of compiler flag strategies to try for C++ code.
     Ordered from most strict to most permissive.
+    Now includes C++20 and C++23 support!
     """
     return [
+        {
+            'name': 'Modern C++23',
+            'flags': ['-std=c++23', '-O2', '-lm'],
+            'description': 'C++23 standard with optimizations'
+        },
+        {
+            'name': 'Permissive C++23',
+            'flags': ['-std=c++23', '-O1', '-lm', '-w'],
+            'description': 'C++23 with all warnings suppressed'
+        },
+        {
+            'name': 'Modern C++20',
+            'flags': ['-std=c++20', '-O2', '-lm'],
+            'description': 'C++20 standard with optimizations'
+        },
+        {
+            'name': 'Permissive C++20',
+            'flags': ['-std=c++20', '-O1', '-lm', '-w'],
+            'description': 'C++20 with all warnings suppressed'
+        },
         {
             'name': 'Modern C++17',
             'flags': ['-std=c++17', '-O2', '-lm'],
@@ -288,6 +309,16 @@ def get_cpp_compiler_strategies():
             'name': 'C++11 standard',
             'flags': ['-std=c++11', '-lm', '-w'],
             'description': 'C++11 standard with no warnings'
+        },
+        {
+            'name': 'GNU C++23 extensions',
+            'flags': ['-std=gnu++23', '-lm', '-w'],
+            'description': 'GNU C++23 with extensions'
+        },
+        {
+            'name': 'GNU C++20 extensions',
+            'flags': ['-std=gnu++20', '-lm', '-w'],
+            'description': 'GNU C++20 with extensions'
         },
         {
             'name': 'GNU C++17 extensions',

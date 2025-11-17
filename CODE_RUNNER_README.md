@@ -7,10 +7,10 @@ A full-stack online code compiler and executor for C, C++, and Python with **dep
 ## ✨ Features
 
 ### 🎯 Intelligent Compilation
-- **Auto-retry system**: Tries 8+ compiler strategies for C, 10+ for C++
+- **Auto-retry system**: Tries 8+ compiler strategies for C, 16+ for C++
 - **Zero warnings**: Automatically suppresses all compiler warnings  
 - **AI error analysis**: Provides helpful suggestions when compilation fails
-- **Multiple standards**: C89/C99/C11/GNU C and C++98/C++11/C++14/C++17/GNU C++
+- **Multiple standards**: C89/C99/C11/GNU C and C++98/C++11/C++14/C++17/C++20/C++23/GNU C++
 
 ### 🔒 Production Security
 - Non-root Docker container (UID 1000)
@@ -175,9 +175,9 @@ Execute code with intelligent compilation.
 
 When you submit C/C++ code, the backend:
 
-1. **First attempt**: Tries modern standards (C11/C++17) with optimizations
+1. **First attempt**: Tries modern standards (C11/C++23/C++20) with optimizations
 2. **On failure**: Falls back to permissive mode with warnings suppressed
-3. **Continues**: Tries older standards (C99, C89, C++14, C++11, C++98)
+3. **Continues**: Tries older standards (C99, C89, C++17, C++14, C++11, C++98)
 4. **Final attempt**: Maximum permissive mode with `-fpermissive` flag
 5. **Success**: Returns first successful compilation
 6. **All fail**: Returns error with AI suggestions

@@ -146,16 +146,22 @@ Execute code.
 8. Default compiler behavior
 
 ### C++ Compilation
-1. Modern C++17 with O2 optimization
-2. Permissive C++17 (warnings off)
-3. C++14 standard
-4. C++11 standard
-5. GNU C++17 with extensions
-6. GNU C++14 with extensions
-7. GNU C++11 with extensions
-8. Maximum permissive mode
-9. Legacy C++98
-10. Default compiler behavior
+1. Modern C++23 with O2 optimization
+2. Permissive C++23 (warnings off)
+3. Modern C++20 with O2 optimization
+4. Permissive C++20 (warnings off)
+5. Modern C++17 with O2 optimization
+6. Permissive C++17 (warnings off)
+7. C++14 standard
+8. C++11 standard
+9. GNU C++23 with extensions
+10. GNU C++20 with extensions
+11. GNU C++17 with extensions
+12. GNU C++14 with extensions
+13. GNU C++11 with extensions
+14. Maximum permissive mode
+15. Legacy C++98
+16. Default compiler behavior
 
 ## 📝 Environment Variables
 
