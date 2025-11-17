@@ -1,25 +1,27 @@
-# Vercel KV Setup Guide for Notes Storage
+# Redis/KV Setup Guide for Notes Storage
 
-This guide explains how to set up Vercel KV (Redis-compatible key-value storage) for persistent notes storage in your Pastebins application.
+This guide explains how to set up Redis-compatible storage for persistent notes storage in your Pastebins application.
 
 ## Overview
 
-Vercel KV provides persistent, serverless storage for notes with screenshots. Benefits include:
+The application supports multiple Redis providers for notes storage:
 
-- ✅ Notes persist across deployments
-- ✅ Server-side storage (not localStorage)
-- ✅ Fast Redis-compatible database
-- ✅ Automatic scaling
-- ✅ Graceful fallback to local storage if KV is unavailable
+- ✅ **Vercel KV** (Recommended for Vercel deployments)
+- ✅ **Redis Labs** (External Redis service)
+- ✅ **Upstash Redis** (Serverless Redis)
+- ✅ **Any Redis-compatible database**
+- ✅ Graceful fallback to local storage if Redis is unavailable
 
-## Prerequisites
+## Option 1: Vercel KV (Recommended for Vercel)
+
+### Prerequisites
 
 1. A Vercel account
 2. A Vercel KV database created in your project
 
-## Step 1: Create a Vercel KV Database
+### Step 1: Create a Vercel KV Database
 
-### Using Vercel Dashboard
+#### Using Vercel Dashboard
 
 1. Go to your Vercel project dashboard
 2. Navigate to the **Storage** tab
@@ -28,13 +30,13 @@ Vercel KV provides persistent, serverless storage for notes with screenshots. Be
 5. Give it a name (e.g., `pastebins-kv`)
 6. Click **Create**
 
-### Using Vercel CLI
+#### Using Vercel CLI
 
 ```bash
 vercel kv create pastebins-kv
 ```
 
-## Step 2: Get Your KV Credentials
+### Step 2: Get Your KV Credentials
 
 After creating the KV database:
 
@@ -44,9 +46,9 @@ After creating the KV database:
    - `KV_REST_API_URL`
    - `KV_REST_API_TOKEN`
 
-## Step 3: Configure Environment Variables
+### Step 3: Configure Environment Variables
 
-### For Vercel Deployment
+#### For Vercel Deployment
 
 1. Go to your Vercel project settings
 2. Navigate to **Environment Variables**
@@ -65,7 +67,7 @@ After creating the KV database:
 4. Click **Save**
 5. Redeploy your application
 
-### For Local Development
+#### For Local Development
 
 Add to your `.env` file or export as environment variables:
 
@@ -74,14 +76,59 @@ export KV_REST_API_URL=https://your-kv-db.kv.vercel-storage.com
 export KV_REST_API_TOKEN=your_token_here
 ```
 
+## Option 2: External Redis Service (Redis Labs, Upstash, etc.)
+
+If you prefer using an external Redis provider instead of Vercel KV:
+
+### Step 1: Get Redis Connection URL
+
+From your Redis provider (e.g., Redis Labs, Upstash, Railway):
+
+1. Create a new Redis database
+2. Copy the **Redis URL** (format: `redis://username:password@host:port`)
+
+Example from Redis Labs:
+```
+redis://default:UeX2zubkNkTUjD5xLCUCbCn0zf3QRR1V@redis-15784.c98.us-east-1-4.ec2.cloud.redislabs.com:15784
+```
+
+### Step 2: Configure Environment Variable
+
+#### For Vercel Deployment
+
+1. Go to your Vercel project settings
+2. Navigate to **Environment Variables**
+3. Add one of these variables:
+   
+   **Option A: `KV_REST_API_REDIS_URL`** (Recommended)
+   - **Name:** `KV_REST_API_REDIS_URL`
+   - **Value:** Your full Redis URL
+   - **Environment:** Select **Production**, **Preview**, and **Development**
+   
+   **Option B: `REDIS_URL`** (Alternative)
+   - **Name:** `REDIS_URL`
+   - **Value:** Your full Redis URL
+   - **Environment:** Select **Production**, **Preview**, and **Development**
+
+4. Click **Save**
+5. Redeploy your application
+
+#### For Local Development
+
+```bash
+export KV_REST_API_REDIS_URL=redis://default:password@host:port
+# OR
+export REDIS_URL=redis://default:password@host:port
+```
+
 ## Step 4: Verify Integration
 
-After deploying with KV credentials:
+After deploying with Redis/KV credentials:
 
 1. Open your application
 2. Navigate to any code file page
 3. Click the **"📝 Notes"** button
-4. You should see: "✅ Using Vercel KV storage (server-side)"
+4. You should see: "✅ Using Redis storage (server-side)" or "✅ Using Vercel KV storage (server-side)"
 5. Create a test note with a screenshot
 6. Refresh the page - the note should persist
 

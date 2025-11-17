@@ -23,28 +23,50 @@ class NotesStorage:
         self.redis_client = None
         self.local_storage = {}
         
-        # Try to initialize Vercel KV (Redis)
-        kv_url = os.environ.get('KV_REST_API_URL')
-        kv_token = os.environ.get('KV_REST_API_TOKEN')
+        # Try to initialize Redis/KV storage
+        # Support multiple Redis connection methods:
+        # 1. Traditional Redis URL (redis://...)
+        # 2. Vercel KV REST API (KV_REST_API_URL + KV_REST_API_TOKEN)
         
-        if kv_url and kv_token:
+        redis_url = os.environ.get('KV_REST_API_REDIS_URL') or os.environ.get('REDIS_URL')
+        kv_rest_url = os.environ.get('KV_REST_API_URL')
+        kv_rest_token = os.environ.get('KV_REST_API_TOKEN')
+        
+        # Try traditional Redis URL first (e.g., from Redis Labs, Upstash, etc.)
+        if redis_url:
             try:
                 import redis
-                # Vercel KV uses Redis protocol
                 self.redis_client = redis.from_url(
-                    kv_url,
-                    decode_responses=True,
-                    password=kv_token
+                    redis_url,
+                    decode_responses=True
                 )
                 # Test connection
                 self.redis_client.ping()
                 self.kv_enabled = True
-                logger.info("Vercel KV storage enabled for notes")
+                logger.info(f"Redis storage enabled for notes (URL: {redis_url[:30]}...)")
+            except Exception as e:
+                logger.warning(f"Failed to connect to Redis: {str(e)}. Trying other methods...")
+        
+        # Try Vercel KV REST API if Redis URL didn't work
+        if not self.kv_enabled and kv_rest_url and kv_rest_token:
+            try:
+                import redis
+                # Vercel KV uses Redis protocol
+                self.redis_client = redis.from_url(
+                    kv_rest_url,
+                    decode_responses=True,
+                    password=kv_rest_token
+                )
+                # Test connection
+                self.redis_client.ping()
+                self.kv_enabled = True
+                logger.info("Vercel KV REST API storage enabled for notes")
             except Exception as e:
                 logger.warning(f"Failed to connect to Vercel KV: {str(e)}. Using local storage.")
                 self.kv_enabled = False
-        else:
-            logger.info("Vercel KV not configured. Using local storage for notes.")
+        
+        if not self.kv_enabled:
+            logger.info("No Redis/KV storage configured. Using local in-memory storage for notes.")
     
     def _get_note_key(self, note_id: str) -> str:
         """Generate storage key for a note."""
