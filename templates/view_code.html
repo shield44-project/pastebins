@@ -64,6 +64,7 @@
             <button id="run-code" class="btn btn-primary">▶️ Run Code</button>
             {% if language in ['c', 'cpp'] %}
             <button id="analyze-code" class="btn btn-secondary" style="margin-left: 10px;">🤖 AI Code Analysis</button>
+            <button id="create-pr" class="btn btn-success" style="margin-left: 10px; display: none;">🚀 Create PR with Refactored Code</button>
             {% endif %}
         </div>
         
@@ -501,6 +502,18 @@
                     }
                     
                     analysisOutput.innerHTML = html;
+                    
+                    // Show Create PR button if there are improvements to be made
+                    const hasRefactoredVersion = analysis.alternatives && analysis.alternatives.some(alt => 
+                        alt.approach && alt.approach.includes('🎯 Complete Refactored Version')
+                    );
+                    
+                    if (hasRefactoredVersion) {
+                        const createPrBtn = document.getElementById('create-pr');
+                        if (createPrBtn) {
+                            createPrBtn.style.display = 'inline-block';
+                        }
+                    }
                 } else {
                     analysisOutput.innerHTML = '<p class="output-error">Error: ' + escapeHtml(data.error || 'Analysis failed') + '</p>';
                 }
@@ -509,6 +522,61 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🤖 AI Code Analysis';
+            }
+        });
+    }
+    
+    // Create PR functionality
+    const createPrBtn = document.getElementById('create-pr');
+    if (createPrBtn) {
+        createPrBtn.addEventListener('click', async function() {
+            if (!confirm('🚀 Create a Pull Request with AI-refactored code?\n\nThis will:\n1. Analyze your code\n2. Apply all suggested improvements\n3. Create a new branch\n4. Open a pull request on GitHub\n\nYou can review and merge the PR at your convenience.')) {
+                return;
+            }
+            
+            const btn = this;
+            const originalText = btn.textContent;
+            
+            btn.disabled = true;
+            btn.textContent = '🔄 Creating PR...';
+            
+            try {
+                const response = await fetch('{{ url_for("create_pr_with_refactored_code", language=language, code_id=code_id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show success message with PR link
+                    const message = `✅ Pull Request Created Successfully!\n\nPR #${data.pr_number}\nBranch: ${data.branch}\n\nClick OK to open the PR on GitHub.`;
+                    if (confirm(message)) {
+                        window.open(data.pr_url, '_blank');
+                    }
+                    
+                    // Also display the link in the analysis section
+                    const analysisOutput = document.getElementById('analysis-output');
+                    const prLink = `<div style="margin-top: 20px; padding: 15px; background: rgba(40, 167, 69, 0.2); border: 2px solid #28a745; border-radius: 8px;">
+                        <h4 style="color: #4dff4d; margin-top: 0;">✅ Pull Request Created!</h4>
+                        <p><strong>PR #${data.pr_number}</strong></p>
+                        <p>Branch: <code>${data.branch}</code></p>
+                        <p><a href="${data.pr_url}" target="_blank" style="color: #4dff4d; text-decoration: underline;">🔗 View Pull Request on GitHub</a></p>
+                    </div>`;
+                    analysisOutput.innerHTML += prLink;
+                    
+                    // Hide the button after successful creation
+                    btn.style.display = 'none';
+                } else {
+                    alert('❌ Error creating PR: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         });
     }

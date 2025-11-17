@@ -292,6 +292,30 @@ main {
     transform: translateY(-2px);
 }
 
+.btn-success {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background: #218838;
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    box-shadow: 0 0 15px rgba(220, 53, 69, 0.5);
+    transform: translateY(-2px);
+}
+
 /* Categories */
 .categories {
     margin: 3rem 0;

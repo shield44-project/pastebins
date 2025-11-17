@@ -258,7 +258,7 @@ class CodeAnalyzer:
                 'approach': 'Use std::vector instead of raw arrays',
                 'benefit': 'Automatic memory management, bounds checking, and better safety',
                 'example': 'std::vector<int> arr(size); instead of int arr[size];',
-                'recommended_code': self._generate_vector_example(code)
+                'recommended_code': self._generate_vector_refactor(code)
             })
         
         # printf vs cout
@@ -267,7 +267,7 @@ class CodeAnalyzer:
                 'approach': 'Use std::cout instead of printf()',
                 'benefit': 'Type-safe, no format specifiers needed, better C++ integration',
                 'example': 'std::cout << value << std::endl; instead of printf("%d", value);',
-                'recommended_code': self._convert_printf_to_cout(code)
+                'recommended_code': self._refactor_printf_to_cout(code)
             })
         
         # scanf vs cin
@@ -276,7 +276,7 @@ class CodeAnalyzer:
                 'approach': 'Use std::cin instead of scanf()',
                 'benefit': 'Type-safe input, no format specifiers needed, better error handling',
                 'example': 'std::cin >> value; instead of scanf("%d", &value);',
-                'recommended_code': self._convert_scanf_to_cin(code)
+                'recommended_code': self._refactor_scanf_to_cin(code)
             })
         
         # Manual memory management
@@ -285,7 +285,7 @@ class CodeAnalyzer:
                 'approach': 'Use smart pointers (C++11 and later)',
                 'benefit': 'Automatic memory management, exception safety, no manual delete needed',
                 'example': 'std::unique_ptr<Type> ptr = std::make_unique<Type>(); instead of Type* ptr = new Type();',
-                'recommended_code': self._convert_to_smart_pointers(code)
+                'recommended_code': self._refactor_to_smart_pointers(code)
             })
         
         # C-style casts
@@ -303,7 +303,7 @@ class CodeAnalyzer:
                 'approach': 'Replace unsafe gets() with fgets()',
                 'benefit': 'Prevents buffer overflow vulnerabilities',
                 'example': 'fgets(buffer, sizeof(buffer), stdin); instead of gets(buffer);',
-                'recommended_code': self._convert_gets_to_fgets(code)
+                'recommended_code': self._refactor_gets_to_fgets(code)
             })
         
         # strcpy to strncpy
@@ -312,8 +312,19 @@ class CodeAnalyzer:
                 'approach': 'Replace strcpy() with strncpy() or safer alternatives',
                 'benefit': 'Prevents buffer overflow by limiting copy length',
                 'example': 'strncpy(dest, src, sizeof(dest)-1); dest[sizeof(dest)-1] = \'\\0\';',
-                'recommended_code': self._convert_strcpy_to_strncpy(code)
+                'recommended_code': self._refactor_strcpy_to_strncpy(code)
             })
+        
+        # Generate comprehensive refactored version combining all fixes
+        if self.issues or self.suggestions:
+            refactored = self._generate_full_refactored_code(code, language)
+            if refactored != code:  # Only add if changes were made
+                self.alternatives.append({
+                    'approach': '🎯 Complete Refactored Version (All Improvements Applied)',
+                    'benefit': 'Incorporates all security fixes, best practices, and modern features',
+                    'example': 'See the complete refactored code below',
+                    'recommended_code': refactored
+                })
     
     def _generate_vector_example(self, code: str) -> str:
         """Generate example using std::vector instead of raw arrays."""
@@ -404,6 +415,205 @@ dest[sizeof(dest) - 1] = '\\0'; // Ensure null termination
 // Or better, use C++ std::string:
 #include <string>
 std::string dest = src; // Automatic memory management'''
+    
+    def _generate_vector_refactor(self, code: str) -> str:
+        """Generate full refactored code using std::vector instead of raw arrays."""
+        refactored = code
+        
+        # Replace array declarations with vector
+        array_pattern = r'(\w+)\s+(\w+)\s*\[\s*(\d+)\s*\]\s*;'
+        matches = re.finditer(array_pattern, code)
+        
+        replacements = []
+        for match in matches:
+            type_name, var_name, size = match.groups()
+            old_decl = match.group(0)
+            new_decl = f'std::vector<{type_name}> {var_name}({size});'
+            replacements.append((old_decl, new_decl))
+        
+        for old, new in replacements:
+            refactored = refactored.replace(old, new)
+        
+        # Add include if not present
+        if '<vector>' not in refactored and replacements:
+            if '#include' in refactored:
+                # Add after last include
+                last_include = max([m.end() for m in re.finditer(r'#include.*\n', refactored)])
+                refactored = refactored[:last_include] + '#include <vector>\n' + refactored[last_include:]
+            else:
+                refactored = '#include <vector>\n' + refactored
+        
+        return refactored if refactored != code else self._generate_vector_example(code)
+    
+    def _refactor_printf_to_cout(self, code: str) -> str:
+        """Generate full refactored code replacing printf with cout."""
+        refactored = code
+        
+        # Replace common printf patterns
+        replacements = [
+            (r'printf\s*\(\s*"([^"]*\\n)"\s*\)', r'std::cout << "\1"'),
+            (r'printf\s*\(\s*"%d\\n"\s*,\s*([^)]+)\)', r'std::cout << \1 << std::endl'),
+            (r'printf\s*\(\s*"%s\\n"\s*,\s*([^)]+)\)', r'std::cout << \1 << std::endl'),
+            (r'printf\s*\(\s*"%f\\n"\s*,\s*([^)]+)\)', r'std::cout << \1 << std::endl'),
+            (r'printf\s*\(\s*"%c\\n"\s*,\s*([^)]+)\)', r'std::cout << \1 << std::endl'),
+        ]
+        
+        for pattern, replacement in replacements:
+            refactored = re.sub(pattern, replacement, refactored)
+        
+        # Replace stdio.h with iostream
+        refactored = refactored.replace('#include <stdio.h>', '#include <iostream>')
+        
+        # Add namespace std if needed
+        if 'std::cout' in refactored and 'using namespace std' not in refactored:
+            # Add after includes
+            if '#include' in refactored:
+                last_include = max([m.end() for m in re.finditer(r'#include.*\n', refactored)])
+                refactored = refactored[:last_include] + '\nusing namespace std;\n' + refactored[last_include:]
+        
+        return refactored if refactored != code else self._convert_printf_to_cout(code)
+    
+    def _refactor_scanf_to_cin(self, code: str) -> str:
+        """Generate full refactored code replacing scanf with cin."""
+        refactored = code
+        
+        # Replace common scanf patterns
+        replacements = [
+            (r'scanf\s*\(\s*"%d"\s*,\s*&([^)]+)\)', r'std::cin >> \1'),
+            (r'scanf\s*\(\s*"%s"\s*,\s*([^)]+)\)', r'std::cin >> \1'),
+            (r'scanf\s*\(\s*"%f"\s*,\s*&([^)]+)\)', r'std::cin >> \1'),
+            (r'scanf\s*\(\s*"%c"\s*,\s*&([^)]+)\)', r'std::cin >> \1'),
+        ]
+        
+        for pattern, replacement in replacements:
+            refactored = re.sub(pattern, replacement, refactored)
+        
+        # Replace stdio.h with iostream
+        refactored = refactored.replace('#include <stdio.h>', '#include <iostream>')
+        
+        # Add namespace std if needed
+        if 'std::cin' in refactored and 'using namespace std' not in refactored:
+            if '#include' in refactored:
+                last_include = max([m.end() for m in re.finditer(r'#include.*\n', refactored)])
+                refactored = refactored[:last_include] + '\nusing namespace std;\n' + refactored[last_include:]
+        
+        return refactored if refactored != code else self._convert_scanf_to_cin(code)
+    
+    def _refactor_to_smart_pointers(self, code: str) -> str:
+        """Generate full refactored code using smart pointers."""
+        refactored = code
+        
+        # Replace new with make_unique
+        new_pattern = r'(\w+)\s*\*\s*(\w+)\s*=\s*new\s+(\w+)(?:\[(\d+)\])?'
+        matches = re.finditer(new_pattern, code)
+        
+        replacements = []
+        for match in matches:
+            type_name, var_name, alloc_type, array_size = match.groups()
+            old_stmt = match.group(0)
+            if array_size:
+                # Array allocation - use vector instead
+                new_stmt = f'std::vector<{type_name}> {var_name}({array_size})'
+            else:
+                # Single object allocation
+                new_stmt = f'auto {var_name} = std::make_unique<{type_name}>()'
+            replacements.append((old_stmt, new_stmt))
+        
+        for old, new in replacements:
+            refactored = refactored.replace(old, new)
+        
+        # Remove delete statements
+        refactored = re.sub(r'delete\s+\w+\s*;', '// delete not needed with smart pointers', refactored)
+        refactored = re.sub(r'delete\[\]\s+\w+\s*;', '// delete[] not needed with smart pointers or vectors', refactored)
+        
+        # Add includes
+        if 'std::make_unique' in refactored and '<memory>' not in refactored:
+            if '#include' in refactored:
+                last_include = max([m.end() for m in re.finditer(r'#include.*\n', refactored)])
+                refactored = refactored[:last_include] + '#include <memory>\n' + refactored[last_include:]
+            else:
+                refactored = '#include <memory>\n' + refactored
+        
+        if 'std::vector' in refactored and '<vector>' not in refactored:
+            if '#include' in refactored:
+                last_include = max([m.end() for m in re.finditer(r'#include.*\n', refactored)])
+                refactored = refactored[:last_include] + '#include <vector>\n' + refactored[last_include:]
+            else:
+                refactored = '#include <vector>\n' + refactored
+        
+        return refactored if refactored != code else self._convert_to_smart_pointers(code)
+    
+    def _refactor_gets_to_fgets(self, code: str) -> str:
+        """Generate full refactored code replacing gets with fgets."""
+        refactored = code
+        
+        # Find gets() calls
+        gets_pattern = r'gets\s*\(\s*(\w+)\s*\)'
+        matches = re.finditer(gets_pattern, code)
+        
+        for match in matches:
+            buffer_name = match.group(1)
+            old_stmt = match.group(0)
+            # Assume buffer size of 100 if we can't determine it
+            new_stmt = f'fgets({buffer_name}, sizeof({buffer_name}), stdin)'
+            refactored = refactored.replace(old_stmt, new_stmt)
+        
+        # Add newline removal after fgets if needed
+        if 'fgets(' in refactored and 'strcspn' not in refactored:
+            # Add a comment about removing newline
+            refactored = '// Note: Use buffer[strcspn(buffer, "\\n")] = 0; to remove trailing newline after fgets\n' + refactored
+        
+        return refactored if refactored != code else self._convert_gets_to_fgets(code)
+    
+    def _refactor_strcpy_to_strncpy(self, code: str) -> str:
+        """Generate full refactored code replacing strcpy with strncpy."""
+        refactored = code
+        
+        # Find strcpy calls
+        strcpy_pattern = r'strcpy\s*\(\s*(\w+)\s*,\s*([^)]+)\)'
+        matches = re.finditer(strcpy_pattern, code)
+        
+        for match in matches:
+            dest, src = match.groups()
+            old_stmt = match.group(0)
+            new_stmt = f'strncpy({dest}, {src}, sizeof({dest}) - 1); {dest}[sizeof({dest}) - 1] = \'\\0\''
+            refactored = refactored.replace(old_stmt, new_stmt)
+        
+        return refactored if refactored != code else self._convert_strcpy_to_strncpy(code)
+    
+    def _generate_full_refactored_code(self, code: str, language: str) -> str:
+        """Generate a complete refactored version of the code with all improvements."""
+        refactored = code
+        
+        # Apply all security fixes
+        if 'gets(' in refactored:
+            refactored = self._refactor_gets_to_fgets(refactored)
+        
+        if 'strcpy(' in refactored:
+            refactored = self._refactor_strcpy_to_strncpy(refactored)
+        
+        # Apply C++ improvements
+        if language == 'cpp':
+            if 'printf(' in refactored:
+                refactored = self._refactor_printf_to_cout(refactored)
+            
+            if 'scanf(' in refactored:
+                refactored = self._refactor_scanf_to_cin(refactored)
+            
+            if 'new ' in refactored or 'malloc(' in refactored:
+                refactored = self._refactor_to_smart_pointers(refactored)
+            
+            if re.search(r'\w+\s*\[\s*\d+\s*\]', refactored):
+                refactored = self._generate_vector_refactor(refactored)
+        
+        # Initialize variables that were uninitialized
+        var_declarations = re.findall(r'(int|char|float|double)\s+(\w+)\s*;', refactored)
+        for var_type, var_name in var_declarations:
+            old_decl = f'{var_type} {var_name};'
+            new_decl = f'{var_type} {var_name} = 0;  // Initialized to prevent undefined behavior'
+            refactored = refactored.replace(old_decl, new_decl, 1)  # Only replace first occurrence
+        
+        return refactored
     
     def _generate_summary(self) -> Dict:
         """Generate a summary of the analysis."""
